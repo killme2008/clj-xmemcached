@@ -2,6 +2,14 @@
 
 An opensource memcached client for clojure wrapping xmemcached. Xmemcached is an opensource high performance memcached client for java.
 
+##Leiningen Usage
+
+To include clj-xmemcached,add:
+
+   		 [clj-xmemcached "0.1.0"]
+
+to your project.clj.
+
 ## Usage
 
 ### Create a client
@@ -25,7 +33,7 @@ Valid options including:
 	(xappend client "key" " zhuang")
 	(xprepend client "key" "hello,")
 
-The value 100 is the expire time for the item.Store functions include xset,xadd,xreplace,xappend and xprepend.Please use doc to print documentation for these functions.
+The value 100 is the expire time for the item in seconds.Store functions include xset,xadd,xreplace,xappend and xprepend.Please use doc to print documentation for these functions.
 
 ### Get items
 
@@ -55,7 +63,7 @@ Above codes try to increase/decrease a number in memcached with key "num",and if
 We use inc function to increase the current value in memcached and try to compare and set it at most Integer.MAX_VALUE times.
 xcas can be called as:
 
-   (xcas client key cas-fn max-times)
+	 (xcas client key cas-fn max-times)
 
 The cas-fn is a function to return a new value,set the new value to 
 
