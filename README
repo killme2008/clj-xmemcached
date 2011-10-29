@@ -7,7 +7,7 @@ An opensource memcached client for clojure wrapping xmemcached. Xmemcached is an
 ### Create a client
 
     (use [clj-xmemcached.core])
-	(def client (xmemcached "host1:port1 host2:port2" :protocol binary))
+	(def client (xmemcached "host1:port1 host2:port2" :protocol "binary"))
 
 Then we create a memcached client using binary protocol to talk with memcached servers host1:port1 and host2:port2.
 Valid options including:
@@ -31,15 +31,21 @@ The value 100 is the expire time for the item.Store functions include xset,xadd,
 	(xget client "key")
 	(xgets client "key")
 
-xgets returns a value including a cas value.
+xgets returns a value including a cas value,for example:
 
-### Increase/Decrease
+	  {:value "hello,dennis zhuang", :class net.rubyeye.xmemcached.GetsResponse, :cas 396}
+
+### Increase/Decrease numbers
 
 	(xincr client "num" 1)
 	(xdecr client "num" 1)
 	(xincr client "num" 1 0)
 
 Above codes try to increase/decrease a number in memcached with key "num",and if the item is not exists,then set it to zero.
+
+### Delete items
+
+	(xdelete client "num")
 
 ### Compare and set
 
