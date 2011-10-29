@@ -38,7 +38,6 @@
 
     :name  A name to define a memcached client instance"
   [servers & opts]
-  (println servers)
   (let [m (apply hash-map (unquote-options opts))
 		name (:name m)
 		protocol (:protocol m)
@@ -145,7 +144,7 @@
 (defn xstats
   "Get statistics info from all memcached servers"
   [cli]
-  (bean (.getStats cli)))
+  (.getStats cli))
 
 (defn xshutdown
   "Shutdown the memcached client"
