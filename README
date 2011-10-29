@@ -1,0 +1,13 @@
+# clj-xmemcached
+
+An opensource memcached client for clojure wrapping xmemcached.
+
+## Usage
+
+FIXME: write
+
+## License
+
+Copyright (C) 2011-2014 dennis zhuang[killme2008@gmail.com]
+
+Distributed under the Eclipse Public License, the same as Clojure.
