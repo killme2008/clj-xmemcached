@@ -1,10 +1,75 @@
 # clj-xmemcached
 
-An opensource memcached client for clojure wrapping xmemcached.
+An opensource memcached client for clojure wrapping xmemcached. Xmemcached is an opensource high performance memcached client for java.
 
 ## Usage
 
-FIXME: write
+### Create a client
+
+    (use [clj-xmemcached.core])
+	(def client (xmemcached "host1:port1 host2:port2" :protocol binary))
+
+Then we create a memcached client using binary protocol to talk with memcached servers host1:port1 and host2:port2.
+Valid options including:
+
+	  :name  Client's name
+	  :protocol  Protocol to talk with memcached,a string value in text,binary or kestrel,default is text protocol.
+	  :hash  Hash algorithm,a string value in consistent or standard,default is standard hash.
+	  :pool  Connection pool size,default is one.
+
+### Store items
+
+	(xset client "key" "dennis")
+	(xset client "key" "dennis" 100)
+	(xappend client "key" " zhuang")
+	(xprepend client "key" "hello,")
+
+The value 100 is the expire time for the item.Store functions include xset,xadd,xreplace,xappend and xprepend.Please use doc to print documentation for these functions.
+
+### Get items
+
+	(xget client "key")
+	(xgets client "key")
+
+xgets returns a value including a cas value.
+
+### Increase/Decrease
+
+	(xincr client "num" 1)
+	(xdecr client "num" 1)
+	(xincr client "num" 1 0)
+
+Above codes try to increase/decrease a number in memcached with key "num",and if the item is not exists,then set it to zero.
+
+### Compare and set
+
+	(xcas client "key" inc)
+
+We use inc function to increase the current value in memcached and try to compare and set it at most Integer.MAX_VALUE times.
+xcas can be called as:
+
+   (xcas client key cas-fn max-times)
+
+The cas-fn is a function to return a new value,set the new value to 
+
+	(cas-fn current-value)
+
+### Shutdown
+
+	(xshutdown client)
+
+### Flush
+
+	(xflush client)
+	(xflush client (InetSocketAddress. host port))
+
+### Statistics
+
+	(xstats client)
+
+### Example
+
+Please see the example code in example/demo.clj
 
 ## License
 

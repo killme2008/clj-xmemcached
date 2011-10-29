@@ -142,6 +142,11 @@
   ([cli] (.flushAll cli))
   ([cli ^InetSocketAddress addr] (.flushAll cli addr)))
 
+(defn xstats
+  "Get statistics info from all memcached servers"
+  [cli]
+  (bean (.getStats cli)))
+
 (defn xshutdown
   "Shutdown the memcached client"
   [cli]
