@@ -7,6 +7,7 @@ An opensource memcached client for clojure wrapping xmemcached. Xmemcached is an
 ### Create a client
 
     (use [clj-xmemcached.core])
+	(def client (xmemcached "host:port"))
 	(def client (xmemcached "host1:port1 host2:port2" :protocol "binary"))
 
 Then we create a memcached client using binary protocol to talk with memcached servers host1:port1 and host2:port2.
