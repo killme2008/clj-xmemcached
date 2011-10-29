@@ -84,7 +84,7 @@ The cas-fn is a function to return a new value,set the new value to
 
 ### Example
 
-Please see the example code in example/demo.clj
+Please see the example code in [example/demo.clj](https://github.com/killme2008/clj-xmemcached/blob/master/example/demo.clj)
 
 ## License
 
