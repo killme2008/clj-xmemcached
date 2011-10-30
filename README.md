@@ -6,7 +6,7 @@ An opensource memcached client for clojure wrapping [xmemcached](http://code.goo
 
 To include clj-xmemcached,add:
 
-   		 [clj-xmemcached "0.1.0"]
+   		 [clj-xmemcached "0.1.1"]
 
 to your project.clj.
 
@@ -24,6 +24,7 @@ Valid options including:
 	  :name  Client's name
 	  :protocol  Protocol to talk with memcached,a string value in text,binary or kestrel,default is text protocol.
 	  :hash  Hash algorithm,a string value in consistent or standard,default is standard hash.
+	  :timeout Operation timeout in milliseconds,default is five seconds.
 	  :pool  Connection pool size,default is one.
 
 ### Store items
@@ -38,11 +39,14 @@ The value 100 is the expire time for the item in seconds.Store functions include
 ### Get items
 
 	(xget client "key")
+	(xget client "key1" "key2" "key3")
 	(xgets client "key")
 
 xgets returns a value including a cas value,for example:
 
 	  {:value "hello,dennis zhuang", :class net.rubyeye.xmemcached.GetsResponse, :cas 396}
+
+And bulk get returns a HashMap contains exists items.
 
 ### Increase/Decrease numbers
 

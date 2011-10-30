@@ -44,6 +44,7 @@
 						:protocol "binary"
 						:name "test"
 						:hash "standard"
+						:timeout 1000
 						:pool 2)]
 	(try
 	  (is (= 2 (.. cli getConnector getSessionSet size)))
@@ -77,6 +78,25 @@
 	  (finally
 	   (xflush cli)
 	   (xshutdown cli)))))
+
+(deftest test-bulk-get
+  (let [cli (xmemcached test-servers)]
+	(try
+	  (is (xset cli "key1" 1))
+	  (is (xadd cli "key2" 2))
+	  (is (xset cli "key3" 3))
+	  (let [rt (xget cli "key1" "key2" "key3")]
+		(is (= 3 (count rt)))
+		(is (contains? rt "key1"))
+		(is (contains? rt "key2"))
+		(is (contains? rt "key3"))
+		(is (= 1 (get rt "key1")))
+		(is (= 2 (get rt "key2")))
+		(is (= 3 (get rt "key3"))))
+	  (finally
+	   (xflush cli)
+	   (xshutdown cli)))))
+
 
 (deftest test-expire
   (let [cli (xmemcached test-servers)]

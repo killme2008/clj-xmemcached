@@ -36,6 +36,8 @@
 
     :pool  Connection pool size,default is 1
 
+    :timeout  Operation timeout in milliseconds,default is five seconds.
+
     :name  A name to define a memcached client instance"
   [servers & opts]
   (let [m (apply hash-map (unquote-options opts))
@@ -43,12 +45,15 @@
 		protocol (:protocol m)
 		hash (:hash m)
 		pool (or (:pool m) 1)
+		timeout (or (:timeout m) 5000)
 		builder (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))]
 	(.setName builder name)
 	(.setSessionLocator builder (make-session-locator hash))
 	(.setConnectionPoolSize builder pool)
 	(.setCommandFactory builder (make-command-factory protocol))
-	(.build builder)))
+	(let [rt (.build builder)]
+	  (.setOpTimeout rt timeout)
+	  rt)))
 
 ;;Macro to store item to memcached
 (defmacro store
@@ -91,9 +96,12 @@
  (store "prepend"))
 
 (defn xget
-  "Get an item's value by key"
-  [^MemcachedClient cli key]
-  (.get cli key))
+  "Get items by keys"
+  [^MemcachedClient cli key & keys]
+  (if (empty? keys)
+	(.get cli key)
+	(.get cli (cons key keys))
+	))
 
 (defn xgets
   "Gets an item's value by key,return value has a cas value"
