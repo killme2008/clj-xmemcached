@@ -79,19 +79,19 @@
 
 (def
  ^{:arglists '([client key value] [client key value expire])
-   :doc "Replace an exists item's value by new value"}
+   :doc "Replace an existing item's value by new value"}
  xreplace
  (store "replace"))
 
 (def
  ^{:arglists '([client key value])
-   :doc "Append a string to an exists item's value by key"}
+   :doc "Append a string to an existing item's value by key"}
  xappend
  (store "append"))
 
 (def 
  ^{:arglists '([client key value])
-   :doc "Prepend a string to an exists item's value by key"}
+   :doc "Prepend a string to an existing item's value by key"}
  xprepend
  (store "prepend"))
 

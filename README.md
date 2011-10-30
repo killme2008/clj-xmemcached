@@ -46,7 +46,7 @@ xgets returns a value including a cas value,for example:
 
 	  {:value "hello,dennis zhuang", :class net.rubyeye.xmemcached.GetsResponse, :cas 396}
 
-And bulk get returns a HashMap contains exists items.
+And bulk get returns a HashMap contains existent items.
 
 ### Increase/Decrease numbers
 
