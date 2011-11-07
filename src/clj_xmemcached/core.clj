@@ -117,9 +117,9 @@
   ([^MemcachedClient cli ^String key cas-fn ^Integer max-times]
 	 (xcas cli key cas-fn max-times 0))
   ([^MemcachedClient cli ^String key cas-fn ^Integer max-times ^Integer expire]
-	 (.cas cli key expire (proxy [CASOperation] []
-							(getMaxTries [] max-times)
-							(getNewValue [_ value] (cas-fn  value))))))
+	 (.cas cli key expire (reify CASOperation 
+							(getMaxTries [this] max-times)
+							(getNewValue [this _ value] (cas-fn  value))))))
 ;;Macro to increase/decrease item's value
 (defmacro incr-decr
   [method]
