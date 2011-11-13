@@ -3,7 +3,7 @@
 	  :author "Dennis zhuang"}
   clj-xmemcached.core
   (:import (net.rubyeye.xmemcached MemcachedClient MemcachedClientBuilder XMemcachedClient CASOperation XMemcachedClientBuilder)
-		   (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator)
+		   (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator PHPMemcacheSessionLocator)
 		   (net.rubyeye.xmemcached.utils AddrUtil)
 		   (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
 		   (java.net InetSocketAddress))
@@ -24,15 +24,16 @@
 		:else (TextCommandFactory.)))
 
 (defn- make-session-locator [hash]
-  (if (or (= hash "consistent") (= hash "ketama"))
-	(KetamaMemcachedSessionLocator.)
-	(ArrayMemcachedSessionLocator.)))
+  (cond (or (= hash "consistent")
+            (= hash "ketama")) (KetamaMemcachedSessionLocator.)
+        (= hash "phpmemcache") (PHPMemcacheSessionLocator.)
+        :else (ArrayMemcachedSessionLocator.)))
 
 (defn xmemcached
   "Create a memcached client with zero or more options(any order):
     :protocol  Protocol to talk with memcached,a string in \"text\" \"binary\" or \"kestrel\",default is text.
 
-    :hash  Hash algorithm,a string in  \"consistent\" or \"standard\",default is standard hash.
+    :hash  Hash algorithm,a string in  \"consistent\", \"standard\" or \"phpmemcache\", default is standard hash.
 
     :pool  Connection pool size,default is 1
 
