@@ -26,8 +26,8 @@
 (defn- make-session-locator [hash]
   (cond (or (= hash "consistent")
             (= hash "ketama")) (KetamaMemcachedSessionLocator.)
-        (= hash "phpmemcache") (PHPMemcacheSessionLocator.)
-        :else (ArrayMemcachedSessionLocator.)))
+            (= hash "phpmemcache") (PHPMemcacheSessionLocator.)
+            :else (ArrayMemcachedSessionLocator.)))
 
 (defn xmemcached
   "Create a memcached client with zero or more options(any order):
@@ -48,10 +48,11 @@
 		pool (or (:pool m) 1)
 		timeout (or (:timeout m) 5000)
 		builder (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))]
-	(.setName builder name)
-	(.setSessionLocator builder (make-session-locator hash))
-	(.setConnectionPoolSize builder pool)
-	(.setCommandFactory builder (make-command-factory protocol))
+    (doto builder
+      (.setName name)
+      (.setSessionLocator (make-session-locator hash))
+      (.setConnectionPoolSize pool)
+      (.setCommandFactory  (make-command-factory protocol)))
 	(let [rt (.build builder)]
 	  (.setOpTimeout rt timeout)
 	  rt)))
@@ -67,34 +68,34 @@
 
 
 (def 
- ^{:arglists '([client key value] [client key value expire])
-   :doc "Set an item with key and value."}
- xset
- (store  "set"))
+  ^{:arglists '([client key value] [client key value expire])
+    :doc "Set an item with key and value."}
+  xset
+  (store  "set"))
 
 (def 
- ^{:arglists '([client key value] [client key value expire])
-   :doc "Add an item with key and value,success only when item is not exists."}
- xadd
- (store "add"))
+  ^{:arglists '([client key value] [client key value expire])
+    :doc "Add an item with key and value,success only when item is not exists."}
+  xadd
+  (store "add"))
 
 (def
- ^{:arglists '([client key value] [client key value expire])
-   :doc "Replace an existing item's value by new value"}
- xreplace
- (store "replace"))
+  ^{:arglists '([client key value] [client key value expire])
+    :doc "Replace an existing item's value by new value"}
+  xreplace
+  (store "replace"))
 
 (def
- ^{:arglists '([client key value])
-   :doc "Append a string to an existing item's value by key"}
- xappend
- (store "append"))
+  ^{:arglists '([client key value])
+    :doc "Append a string to an existing item's value by key"}
+  xappend
+  (store "append"))
 
 (def 
- ^{:arglists '([client key value])
-   :doc "Prepend a string to an existing item's value by key"}
- xprepend
- (store "prepend"))
+  ^{:arglists '([client key value])
+    :doc "Prepend a string to an existing item's value by key"}
+  xprepend
+  (store "prepend"))
 
 (defn xget
   "Get items by keys"
@@ -129,16 +130,16 @@
 	   ([^MemcachedClient cli# ^String key# ^Long delta# ^Long init#] (. cli# ~m key# delta# init#)))))
 
 (def
- ^{:arglist '([client key delta] [client key delta initValue])
-   :doc "Increase an item's value by key"}
- xincr
- (incr-decr "incr"))
+  ^{:arglist '([client key delta] [client key delta initValue])
+    :doc "Increase an item's value by key"}
+  xincr
+  (incr-decr "incr"))
 
 (def
- ^{:arglist '([client key delta] [client key delta initValue])
-   :doc "Decrease an item's value by key"}
- xdecr
- (incr-decr "decr"))
+  ^{:arglist '([client key delta] [client key delta initValue])
+    :doc "Decrease an item's value by key"}
+  xdecr
+  (incr-decr "decr"))
 
 (defn xdelete
   "Delete an item by key"
