@@ -1,12 +1,13 @@
 (ns
-	^{:doc "The core clj-xmemcached"
-	  :author "Dennis zhuang"}
+	^{:doc "The clj-xmemcached core"
+	  :author "Dennis zhuang<killme2008@gmail.com>"}
   clj-xmemcached.core
-  (:import (net.rubyeye.xmemcached MemcachedClient MemcachedClientBuilder XMemcachedClient CASOperation XMemcachedClientBuilder)
+  (:import (net.rubyeye.xmemcached MemcachedClient MemcachedClientBuilder XMemcachedClient CASOperation XMemcachedClientBuilder GetsResponse)
 		   (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator PHPMemcacheSessionLocator)
 		   (net.rubyeye.xmemcached.utils AddrUtil)
 		   (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
 		   (java.net InetSocketAddress))
+  (:refer-clojure :exclude [get set replace])
   (:use 
    [clojure.walk :only [walk]]))
 
@@ -19,26 +20,49 @@
 		args))
 
 (defn- make-command-factory [protocol]
-  (cond (= protocol "binary") (BinaryCommandFactory.)
-		(= protocol "kestrel") (KestrelCommandFactory.)
-		:else (TextCommandFactory.)))
+  (case protocol
+    :binary (BinaryCommandFactory.)
+    :kestrel (KestrelCommandFactory.)
+    (TextCommandFactory.)))
 
 (defn- make-session-locator [hash]
-  (cond (or (= hash "consistent")
-            (= hash "ketama")) (KetamaMemcachedSessionLocator.)
-            (= hash "phpmemcache") (PHPMemcacheSessionLocator.)
-            :else (ArrayMemcachedSessionLocator.)))
+  (case hash
+    (:consistent :ketama :consist) (KetamaMemcachedSessionLocator.)
+    (:php :phpmemcache) (PHPMemcacheSessionLocator.)
+    (ArrayMemcachedSessionLocator.)))
 
-(defn xmemcached
+(def ^:dynamic *memcached-client* nil)
+(def ^:private global-memcached-client (atom nil))
+
+(defmacro with-client
+  "Evalutes body in the context of a thread-bound client to a memcached server."
+  [client & body]
+  `(binding [*memcached-client* ~client]
+     ~@body))
+
+(defn set-client!
+  "Set a global  memcached client for all thread contexts,prefer binding a client by `with-client` macro"
+  [^MemcachedClient client]
+  (reset! global-memcached-client client))
+
+(def no-client-error
+  (Exception. (str "Memcached methods must be called within the context of a"
+                   " client to Memcached server. See `with-client`.")))
+
+(defn get-memcached-client []
+  {:doc "Returns current thread-bound memcached client,if it is not bound,try to get the global client,otherwise throw an exception."
+   :tag MemcachedClient}
+  (or *memcached-client* @global-memcached-client (throw no-client-error)))
+
+(defn memcached
   "Create a memcached client with zero or more options(any order):
-    :protocol  Protocol to talk with memcached,a string in \"text\" \"binary\" or \"kestrel\",default is text.
-
-    :hash  Hash algorithm,a string in  \"consistent\", \"standard\" or \"phpmemcache\", default is standard hash.
-
-    :pool  Connection pool size,default is 1
-
+    :protocol  Protocol to talk with memcached,a keyword in :text,:binary or :kestrel,default is text.
+    :hash  Hash algorithm,a keyword in  :consistent, :standard or :php, default is standard hash.
+    :pool  Connection pool size,default is 1,it's a recommended value.
+    :sanitize-keys  Whether to sanitize keys before operation,default is false.
+    :reconnect  Whether to reconnect when connections are disconnected,default is true.
+    :heartbeat  Whether to do heartbeating when connections are idle,default is true.
     :timeout  Operation timeout in milliseconds,default is five seconds.
-
     :name  A name to define a memcached client instance"
   [servers & opts]
   (let [m (apply hash-map (unquote-options opts))
@@ -47,6 +71,9 @@
 		hash (:hash m)
 		pool (or (:pool m) 1)
 		timeout (or (:timeout m) 5000)
+        reconnect (or (:reconnect m) true)
+        sanitize-keys (or (:sanitize-keys m) false)
+        heartbeat (or (:heartbeat m) true)
 		builder (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))]
     (doto builder
       (.setName name)
@@ -54,109 +81,116 @@
       (.setConnectionPoolSize pool)
       (.setCommandFactory  (make-command-factory protocol)))
 	(let [rt (.build builder)]
-	  (.setOpTimeout rt timeout)
+      (doto rt
+        (.setOpTimeout timeout)
+        (.setEnableHealSession reconnect)
+        (.setEnableHeartBeat heartbeat)
+        (.setSanitizeKeys sanitize-keys))
 	  rt)))
 
-;;Macro to store item to memcached
-(defmacro store
-  [method]
-  (let [m (symbol method)]
-	(if (or (= m (symbol "append")) (= m (symbol "prepend")))
-	  ` (fn [^MemcachedClient cli# ^String key# value#] (. cli# ~m key# value#))
-		` (fn ([^MemcachedClient cli# ^String key# value#] (. cli# ~m key# 0 value#))
-			([^MemcachedClient cli# ^String key# value# ^Integer exp#] (. cli# ~m key# exp# value#))))))
+;;define store functions:  set,add,replace,append,prepend
+(defmacro define-store-fn [meta name]
+  (case name
+    (append prepend)
+    `(defn ~name ~meta [^String key# value#]
+       (. (get-memcached-client) ~name key# value#))
+    `(defn ~name ~meta
+       ([^String key# value#] (. (get-memcached-client) ~name key# 0 value#))
+       ([^String key# value# ^Integer exp#] (. (get-memcached-client) ~name key# exp# value#)))))
 
+(define-store-fn
+  {:arglists '([key value] [key value expire])
+   :doc "Set an item with key and value."}
+  set)
 
-(def 
-  ^{:arglists '([client key value] [client key value expire])
-    :doc "Set an item with key and value."}
-  xset
-  (store  "set"))
+(define-store-fn
+  {:arglists '([key value] [key value expire])
+   :doc "Add an item with key and value,success only when item is not exists."}
+  add)
 
-(def 
-  ^{:arglists '([client key value] [client key value expire])
-    :doc "Add an item with key and value,success only when item is not exists."}
-  xadd
-  (store "add"))
+(define-store-fn
+  {:arglists '([key value] [key value expire])
+   :doc "Replace an existing item's value by new value"}
+  replace )
 
-(def
-  ^{:arglists '([client key value] [client key value expire])
-    :doc "Replace an existing item's value by new value"}
-  xreplace
-  (store "replace"))
+(define-store-fn
+  {:arglists '([key value])
+   :doc "Append a string to an existing item's value by key"}
+  append)
 
-(def
-  ^{:arglists '([client key value])
-    :doc "Append a string to an existing item's value by key"}
-  xappend
-  (store "append"))
+(define-store-fn
+  {:arglists '([key value])
+   :doc "Prepend a string to an existing item's value by key"}
+  prepend)
 
-(def 
-  ^{:arglists '([client key value])
-    :doc "Prepend a string to an existing item's value by key"}
-  xprepend
-  (store "prepend"))
+(defn touch "Touch a item with new expire time."
+  [key expire]
+  (.touch (get-memcached-client) key expire))
 
-(defn xget
-  "Get items by keys"
-  [^MemcachedClient cli key & keys]
-  (if (empty? keys)
-	(.get cli key)
-	(.get cli (cons key keys))
-	))
+(defn get "Get items by a key or many keys,when bulk get items,the result is java.util.HashMap"
+  ([^String k]
+     (.get (get-memcached-client) k))
+  ([k1 k2 ]
+     (.get (get-memcached-client) ^java.util.Collection (list k1 k2)))
+  ([k1 k2 & ks]
+     (.get (get-memcached-client) ^java.util.Collection (list* k1 k2 ks))))
 
-(defn xgets
+(defn gets
   "Gets an item's value by key,return value has a cas value"
-  [^MemcachedClient cli key]
-  (bean  (.gets cli key)))
+  [^String key]
+  (when-let [^GetsResponse resp (.gets (get-memcached-client) key)]
+    {:cas (.getCas resp)
+     :value (.getValue resp)}))
 
-(defn xcas
+(defn cas
   "Compare and set an item's value by key
   set the new value to:
        (cas-fn current-value)"
-  ([^MemcachedClient cli ^String key cas-fn]
-	 (xcas cli key cas-fn Integer/MAX_VALUE))
-  ([^MemcachedClient cli ^String key cas-fn ^Integer max-times]
-	 (xcas cli key cas-fn max-times 0))
-  ([^MemcachedClient cli ^String key cas-fn ^Integer max-times ^Integer expire]
-	 (.cas cli key expire (reify CASOperation 
-							(getMaxTries [this] max-times)
-							(getNewValue [this _ value] (cas-fn  value))))))
-;;Macro to increase/decrease item's value
-(defmacro incr-decr
-  [method]
-  (let [m (symbol method)]
-	`(fn ([^MemcachedClient cli# ^String key# ^Long delta#] (. cli# ~m key# delta#))
-	   ([^MemcachedClient cli# ^String key# ^Long delta# ^Long init#] (. cli# ~m key# delta# init#)))))
+  ([^String key cas-fn]
+	 (cas key cas-fn Integer/MAX_VALUE))
+  ([^String key cas-fn ^Integer max-times]
+	 (cas key cas-fn max-times 0))
+  ([^String key cas-fn ^Integer max-times ^Integer expire]
+	 (.cas (get-memcached-client) key expire (reify CASOperation 
+                                               (getMaxTries [this] max-times)
+                                               (getNewValue [this _ value] (cas-fn  value))))))
 
-(def
-  ^{:arglist '([client key delta] [client key delta initValue])
-    :doc "Increase an item's value by key"}
-  xincr
-  (incr-decr "incr"))
+;;define incr/decr functions
+(defmacro define-incr-decr-fn
+  [meta name]
+  `(defn ~name ~meta ([^String key# ^Long delta#] (. (get-memcached-client) ~name key# delta#))
+     ([^String key# ^Long delta# ^Long init#] (. (get-memcached-client) ~name key# delta# init#))))
 
-(def
-  ^{:arglist '([client key delta] [client key delta initValue])
-    :doc "Decrease an item's value by key"}
-  xdecr
-  (incr-decr "decr"))
+(define-incr-decr-fn
+  {:arglist '([key delta] [key delta init-value])
+   :doc "Increase an item's value by key"}
+  incr)
 
-(defn xdelete
+(define-incr-decr-fn
+  {:arglist '([key delta] [key delta init-value])
+   :doc "Decrease an item's value by key"}
+  decr)
+
+(defn delete
   "Delete an item by key"
-  [^MemcachedClient cli key]
-  (.delete cli key))
+  [key]
+  (.delete (get-memcached-client) key))
 
-(defn xflush
-  "Flush all values in memcached"
-  ([cli] (.flushAll cli))
-  ([cli ^InetSocketAddress addr] (.flushAll cli addr)))
+(defn flush-all
+  "Flush all values in memcached.WARNNING:this method will remove all items in memcached."
+  ([] (flush-all (get-memcached-client)))
+  ([^MemcachedClient cli] (.flushAll cli)))
 
-(defn xstats
+(defn stats
   "Get statistics info from all memcached servers"
-  [cli]
-  (.getStats cli))
+  ([]
+     (stats (get-memcached-client)))
+  ([^MemcachedClient cli]
+     (.getStats cli)))
 
-(defn xshutdown
+(defn shutdown
   "Shutdown the memcached client"
-  [cli]
-  (.shutdown cli))
+  ([]
+     (shutdown (get-memcached-client)))
+  ([^MemcachedClient cli]
+     (.shutdown cli)))

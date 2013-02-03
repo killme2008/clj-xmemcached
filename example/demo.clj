@@ -1,46 +1,53 @@
 ;;A demo for clj-xmemcached
 (ns demo
-  (:use [clj-xmemcached.core]))
+  (:require [clj-xmemcached.core :as xm]))
 
-(def client (xmemcached "localhost:11211"
-						:name "demo"
-						:pool 2
-						:hash "consistent"
-						:protocol "binary"))
-;;Store items
-(xset client "key" "dennis")
-(xset client "key" "dennis" 100)
-(xappend client "key" " zhuang")
-(xprepend client "key" "hello,")
+(def client (xm/memcached "localhost:11211"
+                           :name "demo"
+                           :pool 2
+                           :hash :ketama
+                           :protocol :binary))
 
-;;Get/Gets
-(prn (xget client "key"))
-(prn (xgets client "key"))
+(defmacro wxm
+  [& body]
+  `(xm/with-client client ~@body))
 
-;;Incr/Decr numbers
-(prn (xincr client "num" 1))
-(prn (xdecr client "num" 1))
-(prn  (xincr client "num" 1 0))
+(wxm
+ ;;Store items
+ (xm/set "key" "dennis")
+ (xm/set "key" "dennis" 100)
+ (xm/append "key" " zhuang")
+ (xm/prepend "key" "hello,")
 
-;;Bulk get items
-(prn (xget client "key" "num"))
+ ;;Get/Gets
+ (prn (xm/get "key"))
+ (prn (xm/gets "key"))
 
-;;Delete items
-(xdelete client "num")
-(prn (xget client "num"))
+ ;;Incr/Decr numbers
+ (prn (xm/incr "num" 1))
+ (prn (xm/decr "num" 1))
+ (prn (xm/incr "num" 1 0))
 
-;;Compare and set
-(xset client "key" "hello")
-(xcas client "key" #(str % " world"))
-(prn (xget client "key"))
-(xcas client "key" #(.hashCode %) 1)
-(prn (xget client "key"))
+ ;;Bulk get items
+ (prn (xm/get "key" "num"))
 
-;;stats/flush/shutdown
-(prn (xstats client))
-(xflush client)
-(prn (xstats client))
-(xshutdown client)
+ ;;Delete items
+ (xm/delete "num")
+ (prn (xm/get "num"))
+
+ ;;Compare and set
+ (xm/set "key" "hello")
+ (xm/cas "key" #(str % " world"))
+ (prn (xm/get  "key"))
+ (xm/cas "key" #(.hashCode %) 1)
+ (prn (xm/get "key"))
+
+ ;;stats/flush/shutdown
+ (prn (xm/stats))
+ (xm/flush-all)
+ (prn (xm/stats))
+ (xm/shutdown))
+
 
 
 
