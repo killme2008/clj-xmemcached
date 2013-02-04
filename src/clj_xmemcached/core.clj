@@ -73,20 +73,18 @@
 		timeout (or (:timeout m) 5000)
         reconnect (or (:reconnect m) true)
         sanitize-keys (or (:sanitize-keys m) false)
-        heartbeat (or (:heartbeat m) true)
-		builder (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))]
-    (doto builder
-      (.setName name)
-      (.setSessionLocator (make-session-locator hash))
-      (.setConnectionPoolSize pool)
-      (.setCommandFactory  (make-command-factory protocol)))
-	(let [rt (.build builder)]
+        heartbeat (or (:heartbeat m) true)]
+	(let [builder (doto (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))
+                    (.setName name)
+                    (.setSessionLocator (make-session-locator hash))
+                    (.setConnectionPoolSize pool)
+                    (.setCommandFactory  (make-command-factory protocol)))
+          rt (.build builder)]
       (doto rt
         (.setOpTimeout timeout)
         (.setEnableHealSession reconnect)
         (.setEnableHeartBeat heartbeat)
-        (.setSanitizeKeys sanitize-keys))
-	  rt)))
+        (.setSanitizeKeys sanitize-keys)))))
 
 ;;define store functions:  set,add,replace,append,prepend
 (defmacro define-store-fn [meta name]
