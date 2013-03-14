@@ -5,6 +5,7 @@
   (:import (net.rubyeye.xmemcached MemcachedClient MemcachedClientBuilder XMemcachedClient CASOperation XMemcachedClientBuilder GetsResponse)
 		   (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator PHPMemcacheSessionLocator)
 		   (net.rubyeye.xmemcached.utils AddrUtil)
+           (net.rubyeye.xmemcached.transcoders SerializingTranscoder)
 		   (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
 		   (java.net InetSocketAddress))
   (:refer-clojure :exclude [get set replace])
@@ -61,21 +62,21 @@
     :pool  Connection pool size,default is 1,it's a recommended value.
     :sanitize-keys  Whether to sanitize keys before operation,default is false.
     :reconnect  Whether to reconnect when connections are disconnected,default is true.
+    :transcoder Transcoder to encode/decode data.
     :heartbeat  Whether to do heartbeating when connections are idle,default is true.
     :timeout  Operation timeout in milliseconds,default is five seconds.
     :name  A name to define a memcached client instance"
   [servers & opts]
-  (let [m (apply hash-map (unquote-options opts))
-		name (:name m)
-		protocol (:protocol m)
-		hash (:hash m)
-		pool (or (:pool m) 1)
-		timeout (or (:timeout m) 5000)
-        reconnect (or (:reconnect m) true)
-        sanitize-keys (or (:sanitize-keys m) false)
-        heartbeat (or (:heartbeat m) true)]
+  (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat]
+         :or {pool 1
+              timeout 5000
+              transcoder (SerializingTranscoder.)
+              reconnect true
+              sanitize-keys false
+              heartbeat true}} (apply hash-map (unquote-options opts))]
 	(let [builder (doto (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))
                     (.setName name)
+                    (.setTranscoder transcoder)
                     (.setSessionLocator (make-session-locator hash))
                     (.setConnectionPoolSize pool)
                     (.setCommandFactory  (make-command-factory protocol)))

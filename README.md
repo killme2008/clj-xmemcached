@@ -6,7 +6,7 @@ An opensource memcached client for clojure wrapping [xmemcached](http://code.goo
 
 To use clj-xmemcached,add:
 ```clj
-	[clj-xmemcached "0.2.0-RC1"]
+	[clj-xmemcached "0.2.0"]
 ```
 to your project.clj.
 
@@ -33,6 +33,7 @@ All valid options:
      :reconnect  Whether to reconnect when connections are disconnected,default is true.
      :heartbeat  Whether to do heartbeating when connections are idle,default is true.
      :timeout  Operation timeout in milliseconds,default is five seconds.
+     :transcoder Transcoder to encode/decode data.
      :name  A name to define a memcached client instance"
 
 ### Store items
