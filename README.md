@@ -6,7 +6,7 @@ An opensource memcached client for clojure wrapping [xmemcached](http://code.goo
 
 To use clj-xmemcached,add:
 ```clj
-	[clj-xmemcached "0.2.0"]
+	[clj-xmemcached "0.2.1"]
 ```
 to your project.clj.
 
@@ -114,6 +114,14 @@ The cas-fn is a function to return a new value,set item's new value to:
 ```clj
 	(xm/stats)
 ```
+
+### Dereference raw XmemcachedClient
+Because `memcached` function returns a Delay object,so if you want the raw `XmemcachedClient` instance,you have to deref it:
+```clj
+	@client
+	(xm/shutdown @client)
+```
+
 ### Example
 
 Please see the example code in [example/demo.clj](https://github.com/killme2008/clj-xmemcached/blob/master/example/demo.clj)

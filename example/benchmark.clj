@@ -34,4 +34,4 @@
 (benchmark "Benchmark set & get"
            (xm/set (str (+ times (* thread repeats))) value)
            (xm/get (str (+ times (* thread repeats)))))
-(xm/shutdown client)
+(xm/shutdown @client)

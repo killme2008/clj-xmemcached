@@ -1,4 +1,4 @@
-(defproject clj-xmemcached "0.2.0"
+(defproject clj-xmemcached "0.2.1"
   :author "dennis zhuang[killme2008@gmail.com]"
   :description "An opensource memcached client for clojure wrapping xmemcached"
   :dependencies [[org.clojure/clojure "1.4.0"]

@@ -53,7 +53,7 @@
 (defn get-memcached-client []
   {:doc "Returns current thread-bound memcached client,if it is not bound,try to get the global client,otherwise throw an exception."
    :tag MemcachedClient}
-  (or *memcached-client* @global-memcached-client (throw no-client-error)))
+  (deref (or *memcached-client* @global-memcached-client (throw no-client-error)))) 
 
 (defn memcached
   "Create a memcached client with zero or more options(any order):
@@ -67,25 +67,26 @@
     :timeout  Operation timeout in milliseconds,default is five seconds.
     :name  A name to define a memcached client instance"
   [servers & opts]
-  (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat]
-         :or {pool 1
-              timeout 5000
-              transcoder (SerializingTranscoder.)
-              reconnect true
-              sanitize-keys false
-              heartbeat true}} (apply hash-map (unquote-options opts))]
-	(let [builder (doto (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))
-                    (.setName name)
-                    (.setTranscoder transcoder)
-                    (.setSessionLocator (make-session-locator hash))
-                    (.setConnectionPoolSize pool)
-                    (.setCommandFactory  (make-command-factory protocol)))
-          rt (.build builder)]
-      (doto rt
-        (.setOpTimeout timeout)
-        (.setEnableHealSession reconnect)
-        (.setEnableHeartBeat heartbeat)
-        (.setSanitizeKeys sanitize-keys)))))
+  (delay
+   (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat]
+          :or {pool 1
+               timeout 5000
+               transcoder (SerializingTranscoder.)
+               reconnect true
+               sanitize-keys false
+               heartbeat true}} (apply hash-map (unquote-options opts))]
+     (let [builder (doto (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))
+                     (.setName name)
+                     (.setTranscoder transcoder)
+                     (.setSessionLocator (make-session-locator hash))
+                     (.setConnectionPoolSize pool)
+                     (.setCommandFactory  (make-command-factory protocol)))
+           rt (.build builder)]
+       (doto rt
+         (.setOpTimeout timeout)
+         (.setEnableHealSession reconnect)
+         (.setEnableHeartBeat heartbeat)
+         (.setSanitizeKeys sanitize-keys))))))
 
 ;;define store functions:  set,add,replace,append,prepend
 (defmacro define-store-fn [meta name]
@@ -178,7 +179,7 @@
 (defn flush-all
   "Flush all values in memcached.WARNNING:this method will remove all items in memcached."
   ([] (flush-all (get-memcached-client)))
-  ([^MemcachedClient cli] (.flushAll cli)))
+  ([cli] (.flushAll ^MemcachedClient cli)))
 
 (defn stats
   "Get statistics info from all memcached servers"

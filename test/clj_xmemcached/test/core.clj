@@ -28,11 +28,11 @@
 
 
 (deftest test-xmemcached1
-  (let [cli (memcached test-servers
+  (let [cli (deref (memcached test-servers
                        :protocol :kestrel
                        :name "test"
                        :hash :ketama
-                       :pool 10)]
+                       :pool 10))]
 	(try
 	  (is (= 10 (.. cli getConnector getSessionSet size)))
 	  (is (= "Kestrel" (.. cli getProtocol name)))
@@ -41,12 +41,12 @@
 	   (.shutdown cli)))))
 
 (deftest test-xmemcached2
-  (let [cli (memcached test-servers
+  (let [cli (deref (memcached test-servers
                        :protocol  :binary
                        :name "test"
                        :hash :standard
                        :timeout 1000
-                       :pool 2)]
+                       :pool 2))]
 	(try
 	  (is (= 2 (.. cli getConnector getSessionSet size)))
 	  (is (= "Binary" (.. cli getProtocol name)))
@@ -85,8 +85,8 @@
       (is (delete "a"))
       (is (nil? (get "a")))
       (finally
-       (flush-all cli)
-       (shutdown cli)
+       (flush-all @cli)
+       (shutdown @cli)
        (set-client! nil)))))
 
 (deftest test-gets
