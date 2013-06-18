@@ -5,10 +5,11 @@
   (:import (net.rubyeye.xmemcached MemcachedClient MemcachedClientBuilder XMemcachedClient CASOperation XMemcachedClientBuilder GetsResponse)
 		   (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator PHPMemcacheSessionLocator)
 		   (net.rubyeye.xmemcached.utils AddrUtil)
-           (net.rubyeye.xmemcached.transcoders SerializingTranscoder)
+           (net.rubyeye.xmemcached.transcoders CachedData Transcoder SerializingTranscoder)
 		   (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
 		   (java.net InetSocketAddress))
   (:refer-clojure :exclude [get set replace])
+  (:require [clojure.data.json :as json])
   (:use 
    [clojure.walk :only [walk]]))
 
@@ -68,8 +69,10 @@
     :name  A name to define a memcached client instance"
   [servers & opts]
   (delay
-   (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat]
+   (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat merge-factor merge-buffer]
           :or {pool 1
+               merge-factor 50
+               merge-buffer true
                timeout 5000
                transcoder (SerializingTranscoder.)
                reconnect true
@@ -86,6 +89,8 @@
          (.setOpTimeout timeout)
          (.setEnableHealSession reconnect)
          (.setEnableHeartBeat heartbeat)
+         (.setMergeFactor merge-factor)
+         (.setOptimizeMergeBuffer merge-buffer)
          (.setSanitizeKeys sanitize-keys))))))
 
 ;;define store functions:  set,add,replace,append,prepend
@@ -194,3 +199,19 @@
      (shutdown (get-memcached-client)))
   ([^MemcachedClient cli]
      (.shutdown cli)))
+
+(def clj-json-transcoder (reify Transcoder
+                           (encode [this obj]
+                             (if (string? obj)
+                               (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
+                               (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") (* 1024 1024) -1)))
+                           (decode [this ^CachedData data]
+                             (case (.getFlag data)
+                               0 (String. ^bytes (.getData data) "utf-8")
+                               1 (json/read-str (String. ^bytes (.getData data) "utf-8") :key-fn keyword)))
+                           (setPrimitiveAsString [this b])
+                           (setPackZeros [this b])
+                           (setCompressionThreshold [this b])
+                           (isPrimitiveAsString [this] false)
+                           (isPackZeros [this] false)
+                           (setCompressionMode [this m])))
