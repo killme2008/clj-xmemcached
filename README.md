@@ -116,7 +116,7 @@ The cas-fn is a function to return a new value,set item's new value to:
 ```
 
 ### Dereference raw XmemcachedClient
-Because `memcached` function returns a Delay object,so if you want the raw `XmemcachedClient` instance,you have to deref it:
+Because `memcached` function returns a delayed object,so if you want to get the raw `XmemcachedClient` instance,you have to deref it:
 ```clj
 	@client
 	(xm/shutdown @client)
