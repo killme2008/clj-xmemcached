@@ -55,7 +55,8 @@
 	   (.shutdown cli)))))
 
 (deftest test-store-get-delete
-  (let [cli (memcached test-servers)]
+  (let [cli (memcached test-servers
+                       :transcoder clj-json-transcoder)]
     (with-client cli
       (try
         (is (add "a" 1))

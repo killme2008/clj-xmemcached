@@ -6,7 +6,7 @@ An opensource memcached client for clojure wrapping [xmemcached](http://code.goo
 
 To use clj-xmemcached,add:
 ```clj
-	[clj-xmemcached "0.2.1"]
+	[clj-xmemcached "0.2.2"]
 ```
 to your project.clj.
 
@@ -33,7 +33,7 @@ All valid options:
      :reconnect  Whether to reconnect when connections are disconnected,default is true.
      :heartbeat  Whether to do heartbeating when connections are idle,default is true.
      :timeout  Operation timeout in milliseconds,default is five seconds.
-     :transcoder Transcoder to encode/decode data.
+     :transcoder Transcoder to encode/decode data. For example, clj-json-transcoder.
      :name  A name to define a memcached client instance"
 
 ### Store items
@@ -121,6 +121,11 @@ Because `memcached` function returns a Delay object,so if you want the raw `Xmem
 	@client
 	(xm/shutdown @client)
 ```
+
+### Transcoders
+
+We use [SerializationTranscoder](http://xmemcached.googlecode.com/svn/trunk/apidocs/net/rubyeye/xmemcached/transcoders/SerializingTranscoder.html) by default,it will encode/decode values using java serialization.
+But since `0.2.2`, we provide a new transcoder `clj-json-transcoder` to encode/decode values using [clojure.data.json](https://github.com/clojure/data.json).It is suitable to integrate with other systems written in other languages. 
 
 ### Example
 
