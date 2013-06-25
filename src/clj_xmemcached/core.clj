@@ -204,15 +204,22 @@
   ([^MemcachedClient cli]
      (.shutdown cli)))
 
+(defonce byte-array-class (Class/forName "[B"))
+(definline bytes? [x]
+  `(= byte-array-class
+      (class ~x)))
+
 (def clj-json-transcoder (reify Transcoder
                            (encode [this obj]
-                             (if (string? obj)
-                               (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
-                               (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") (* 1024 1024) -1)))
+                             (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
+                                   (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
+                                   :else
+                                   (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") (* 1024 1024) -1)))
                            (decode [this ^CachedData data]
                              (case (.getFlag data)
                                0 (String. ^bytes (.getData data) "utf-8")
-                               1 (json/read-str (String. ^bytes (.getData data) "utf-8") :key-fn keyword)))
+                               1 (json/read-str (String. ^bytes (.getData data) "utf-8") :key-fn keyword)
+                               2 (.getData data)))
                            (setPrimitiveAsString [this b])
                            (setPackZeros [this b])
                            (setCompressionThreshold [this b])
