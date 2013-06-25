@@ -1,6 +1,6 @@
 # clj-xmemcached
 
-An opensource memcached client for clojure wrapping [xmemcached](http://code.google.com/p/xmemcached/). [Xmemcached](http://code.google.com/p/xmemcached/) is an opensource high performance memcached client for java.
+An opensource memcached client for clojure wraps [xmemcached](http://code.google.com/p/xmemcached/). [Xmemcached](http://code.google.com/p/xmemcached/) is an opensource high performance memcached client for java.
 
 ##Leiningen Usage
 
