@@ -10,7 +10,7 @@
 		   (java.net InetSocketAddress))
   (:refer-clojure :exclude [get set replace])
   (:require [clojure.data.json :as json])
-  (:use 
+  (:use
    [clojure.walk :only [walk]]))
 
 (defn- unquote-options [args]
@@ -54,7 +54,7 @@
 (defn get-memcached-client []
   {:doc "Returns current thread-bound memcached client,if it is not bound,try to get the global client,otherwise throw an exception."
    :tag MemcachedClient}
-  (deref (or *memcached-client* @global-memcached-client (throw no-client-error)))) 
+  (deref (or *memcached-client* @global-memcached-client (throw no-client-error))))
 
 (defn memcached
   "Create a memcached client with zero or more options(any order):
@@ -101,7 +101,7 @@
        (. (get-memcached-client) ~name key# value#))
     `(defn ~name ~meta
        ([^String key# value#] (. (get-memcached-client) ~name key# 0 value#))
-       ([^String key# value# ^Integer exp#] (. (get-memcached-client) ~name key# exp# value#)))))
+       ([^String key# value# exp#] (. (get-memcached-client) ~name key# exp# value#)))))
 
 (define-store-fn
   {:arglists '([key value] [key value expire])
@@ -156,7 +156,7 @@
   ([^String key cas-fn ^Integer max-times]
 	 (cas key cas-fn max-times 0))
   ([^String key cas-fn ^Integer max-times ^Integer expire]
-	 (.cas (get-memcached-client) key expire (reify CASOperation 
+	 (.cas (get-memcached-client) key expire (reify CASOperation
                                                (getMaxTries [this] max-times)
                                                (getNewValue [this _ value] (cas-fn  value))))))
 
@@ -177,9 +177,12 @@
   decr)
 
 (defn delete
-  "Delete an item by key"
-  [key]
-  (.delete (get-memcached-client) key))
+  "Delete an item by key [with CAS values that was get in binary protocol]."
+  ([key]
+     (delete key 0))
+  ([key cas]
+     (let [xmc (get-memcached-client)]
+       (.delete xmc key cas (.getOpTimeout xmc)))))
 
 (defn flush-all
   "Flush all values in memcached.WARNNING:this method will remove all items in memcached."
@@ -215,3 +218,41 @@
                            (isPrimitiveAsString [this] false)
                            (isPackZeros [this] false)
                            (setCompressionMode [this m])))
+
+(defmacro try-lock
+  "Lightweight distribution lock.
+   Try to lock with the global key,if gettting lock successfully,
+   then do something,
+   else do other things.For example,get the global lock to initial
+   in 5 seconds:
+
+    (try-lock \"init-lock\" 5000
+        (start-service))"
+
+  ([key expire then]
+     `(try-lock ~key ~expire ~then nil))
+  ([key expire then else]
+     `(if (add ~key true ~expire)
+        (try
+          ~then
+          (finally
+            (delete ~key)))
+        ~else)))
+
+(defmacro through
+  "A macro to get item from cache or cache the value evaluated by load cause.
+  For example,you want to get the user from memcached if it is exists in cache
+  or load it from database to memcached and return it:
+
+    (through uid 60
+        (load-user-from-db uid)) "
+
+  ([key load]
+     `(through ~key 0 ~load))
+  ([key expire load]
+     `(if-let [rt# (get ~key)]
+        rt#
+        (let [v# ~load]
+          (when v#
+            (add ~key v# ~expire))
+          v#))))
