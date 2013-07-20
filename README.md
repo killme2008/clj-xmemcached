@@ -10,6 +10,10 @@ To use clj-xmemcached,add:
 ```
 to your project.clj.
 
+##API docs
+
+[clj-xmemcached APIs](http://fnil.net/docs/clj-xmemcached/)
+
 ## Usage
 
 ### Client

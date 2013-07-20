@@ -9,5 +9,6 @@
   :profiles {:dev {:dependencies [[log4j/log4j "1.2.16"]
                                   [org.slf4j/slf4j-log4j12 "1.5.6"]]
                    :resource-paths ["dev"]}}
-  :plugins [[lein-exec "0.3.0"]]
+  :plugins [[lein-exec "0.3.0"]
+            [codox "0.6.4"]]
   :warn-on-reflection true)
