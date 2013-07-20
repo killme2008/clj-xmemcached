@@ -88,7 +88,7 @@ Above codes try to increase/decrease a number in memcached with key "num",and if
 ### Delete items
 ```clj
 	(xm/delete "num")
-	;;delete with CAS
+	;;delete with CAS in binary protocol.
 	(xm/delete "num" (:cas (gets "num")))
 ```
 ### Compare and set
