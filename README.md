@@ -158,7 +158,7 @@ Equals to:
 	(xm/stats)
 ```
 
-### Dereference raw XmemcachedClient
+### Get the raw XmemcachedClient instance
 Because `memcached` function returns a delayed object,so if you want to get the raw `XmemcachedClient` instance,you have to deref it:
 ```clj
 	@client
@@ -167,7 +167,7 @@ Because `memcached` function returns a delayed object,so if you want to get the 
 
 ### Transcoders
 
-We use [SerializationTranscoder](http://xmemcached.googlecode.com/svn/trunk/apidocs/net/rubyeye/xmemcached/transcoders/SerializingTranscoder.html) by default,it will encode/decode values using java serialization.
+We use [SerializationTranscoder](http://xmemcached.googlecode.com/svn/trunk/apidocs/net/rubyeye/xmemcached/transcoders/SerializingTranscoder.html) by default,it will encode/decode values by java serialization.
 But since `0.2.2`, we provide a new transcoder `clj-json-transcoder` to encode/decode values using [clojure.data.json](https://github.com/clojure/data.json).It is suitable to integrate with other systems written in other languages.
 
 ### Example
