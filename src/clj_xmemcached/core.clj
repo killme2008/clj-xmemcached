@@ -164,7 +164,8 @@
 (defmacro define-incr-decr-fn
   [meta name]
   `(defn ~name ~meta ([^String key# ^Long delta#] (. (get-memcached-client) ~name key# delta#))
-     ([^String key# ^Long delta# ^Long init#] (. (get-memcached-client) ~name key# delta# init#))))
+     ([^String key# ^Long delta# ^Long init#] (. (get-memcached-client) ~name key# delta# init#))
+     ([^String key# ^Long delta# ^Long init# expire#] (. (get-memcached-client) ~name key# delta# init# (.getOpTimeout (get-memcached-client)) expire#))))
 
 (define-incr-decr-fn
   {:arglist '([key delta] [key delta init-value])

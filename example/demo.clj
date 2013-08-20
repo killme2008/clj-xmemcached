@@ -34,9 +34,9 @@
  ;;Delete items
  (xm/delete "num")
  (prn (xm/get "num"))
- (set "num" 1)
+ (xm/set "num" 1)
  ;;delete item with CAS,only valid in binary protocol.
- (xm/delete "num" (:cas (gets "num")))
+ (xm/delete "num" (:cas (xm/gets "num")))
  (prn (xm/get "num"))
 
  ;;Compare and set

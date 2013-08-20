@@ -180,6 +180,18 @@
           (flush-all)
           (shutdown))))))
 
+(deftest test-incr-decr-with-expire
+  (let [cli (memcached test-servers)]
+    (with-client cli
+      (try
+        (is (= 0 (incr "a" 1 0 1)))
+        (is (= 2 (incr "a" 2)))
+        (Thread/sleep 2000)
+        (is (nil? (get "a")))
+        (finally
+          (flush-all)
+          (shutdown))))))
+
 (deftest test-append-prepend
   (let [cli (memcached test-servers)]
     (with-client cli
