@@ -72,6 +72,24 @@
           (flush-all)
           (shutdown))))))
 
+(deftest test-nippy-transcoder
+  (let [cli (memcached test-servers
+                       :transcoder nippy-transcoder)]
+    (with-client cli
+      (try
+        (is (add "a" 1))
+        (is (not (add "a" 2)))
+        (is (= 1 (get "a")))
+        (is (replace "a" 2))
+        (is (= 2 (get "a")))
+        (is (set "a" 3))
+        (is (= 3 (get "a")))
+        (is (delete "a"))
+        (is (nil? (get "a")))
+        (finally
+         (flush-all)
+         (shutdown))))))
+
 (deftest test-set-client!
   (let [cli (memcached test-servers)]
     (set-client! cli)

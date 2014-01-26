@@ -9,7 +9,8 @@
 		   (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
 		   (java.net InetSocketAddress))
   (:refer-clojure :exclude [get set replace])
-  (:require [clojure.data.json :as json])
+  (:require [clojure.data.json :as json]
+            [taoensso.nippy :as nippy])
   (:use
    [clojure.walk :only [walk]]))
 
@@ -208,6 +209,25 @@
 (definline bytes? [x]
   `(= byte-array-class
       (class ~x)))
+
+(def nippy-transcoder (reify Transcoder
+                        (encode [this obj]
+                          (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
+                                (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
+                                :else
+                                (CachedData. 1 (nippy/freeze obj) (* 1024 1024) -1)))
+                        (decode [this ^CachedData data]
+                          (let [ ^bytes bs (.getData data)]
+                            (case (.getFlag data)
+                              0 (String. ^bytes bs "utf-8")
+                              1 (nippy/thaw bs)
+                              2 bs)))
+                        (setPrimitiveAsString [this b])
+                        (setPackZeros [this b])
+                        (setCompressionThreshold [this b])
+                        (isPrimitiveAsString [this] false)
+                        (isPackZeros [this] false)
+                        (setCompressionMode [this m])))
 
 (def clj-json-transcoder (reify Transcoder
                            (encode [this obj]

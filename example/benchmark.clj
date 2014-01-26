@@ -2,7 +2,7 @@
   (:require [clj-xmemcached.core :as xm]))
 
 
-(def client (xm/memcached "localhost:11211"))
+(def client (xm/memcached "localhost:11211" :transcoder xm/nippy-transcoder))
 (def threads 50)
 (def repeats 10000)
 

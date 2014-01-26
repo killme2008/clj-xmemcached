@@ -5,8 +5,9 @@ An opensource memcached client for clojure wraps [xmemcached](http://code.google
 ##Leiningen Usage
 
 To use clj-xmemcached,add:
-```clj
-	[clj-xmemcached "0.2.3"]
+
+```
+	[clj-xmemcached "0.2.3-beta"]
 ```
 to your project.clj.
 
@@ -171,8 +172,10 @@ Because `memcached` function returns a delayed object,so if you want to get the 
 
 ### Transcoders
 
-We use [SerializationTranscoder](http://xmemcached.googlecode.com/svn/trunk/apidocs/net/rubyeye/xmemcached/transcoders/SerializingTranscoder.html) by default,it will encode/decode values by java serialization.
+We use [SerializationTranscoder](http://xmemcached.googlecode.com/svn/trunk/apidocs/net/rubyeye/xmemcached/transcoders/SerializingTranscoder.html) by default,it will encode/decode values using java serialization.
 But since `0.2.2`, we provide a new transcoder `clj-json-transcoder` to encode/decode values using [clojure.data.json](https://github.com/clojure/data.json).It is suitable to integrate with other systems written in other languages.
+
+And we add `nippy-transcoder` in 0.2.3, it use [nippy](https://github.com/ptaoussanis/nippy) for serialization.
 
 ### Example
 
