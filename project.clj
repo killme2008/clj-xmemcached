@@ -4,7 +4,7 @@
   :dependencies [[org.clojure/data.json "0.2.4"]
                  [org.slf4j/slf4j-log4j12 "1.5.6"]
                  [com.taoensso/nippy "2.5.2"]
-				 [com.googlecode.xmemcached/xmemcached "1.4.1"]]
+				 [com.googlecode.xmemcached/xmemcached "1.4.2"]]
   :test-paths ["test" "example"]
   :profiles {:dev {:dependencies [[log4j/log4j "1.2.16"]
                                   [org.slf4j/slf4j-log4j12 "1.5.6"]]

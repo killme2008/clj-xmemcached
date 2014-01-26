@@ -183,8 +183,8 @@
   ([key]
      (delete key 0))
   ([key cas]
-     (let [xmc (get-memcached-client)]
-       (.delete xmc key cas (.getOpTimeout xmc)))))
+     (let [^MemcachedClient xmc (get-memcached-client)]
+       (.delete xmc ^String key ^long cas ^long (.getOpTimeout xmc)))))
 
 (defn flush-all
   "Flush all values in memcached.WARNNING:this method will remove all items in memcached."
