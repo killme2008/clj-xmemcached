@@ -7,7 +7,7 @@ An opensource memcached client for clojure wraps [xmemcached](http://code.google
 To use clj-xmemcached,add:
 
 ```
-	[clj-xmemcached "0.2.3-RC1"]
+	[clj-xmemcached "0.2.4-beta"]
 ```
 to your project.clj.
 
