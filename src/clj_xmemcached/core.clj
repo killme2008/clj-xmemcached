@@ -70,7 +70,7 @@
     :name  A name to define a memcached client instance"
   [servers & opts]
   (delay
-   (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat merge-factor merge-buffer]
+   (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat merge-factor merge-buffer session-locator]
           :or {pool 1
                merge-factor 50
                merge-buffer true
@@ -82,7 +82,7 @@
      (let [builder (doto (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))
                      (.setName name)
                      (.setTranscoder transcoder)
-                     (.setSessionLocator (make-session-locator hash))
+                     (.setSessionLocator (or session-locator (make-session-locator hash)))
                      (.setConnectionPoolSize pool)
                      (.setCommandFactory  (make-command-factory protocol)))
            rt (.build builder)]
