@@ -7,7 +7,7 @@ An opensource memcached client for clojure wraps [xmemcached](http://code.google
 To use clj-xmemcached,add:
 
 ```
-	[clj-xmemcached "0.2.4-beta"]
+	[clj-xmemcached "0.2.4"]
 ```
 to your project.clj.
 
@@ -34,6 +34,7 @@ All valid options:
 	 :protocol  Protocol to talk with memcached,a keyword in :text,:binary or :kestrel,default is text.
      :hash  Hash algorithm,a keyword in  :consistent, :standard or :php, default is standard hash.
      :pool  Connection pool size,default is 1,it's a recommended value.
+     session-locator memcached connection locator,default is created based on :hash algorithm value.
      :sanitize-keys  Whether to sanitize keys before operation,default is false.
      :reconnect  Whether to reconnect when connections are disconnected,default is true.
      :heartbeat  Whether to do heartbeating when connections are idle,default is true.

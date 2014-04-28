@@ -65,7 +65,7 @@
     :sanitize-keys  Whether to sanitize keys before operation,default is false.
     :reconnect  Whether to reconnect when connections are disconnected,default is true.
     :transcoder Transcoder to encode/decode data.
-    :session-locator memcached connection locator,default is created by hash algorithm type.
+    :session-locator memcached connection locator,default is created by :hash algorithm value.
     :heartbeat  Whether to do heartbeating when connections are idle,default is true.
     :timeout  Operation timeout in milliseconds,default is five seconds.
     :name  A name to define a memcached client instance"
