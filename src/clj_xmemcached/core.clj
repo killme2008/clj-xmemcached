@@ -5,11 +5,14 @@
   (:import (net.rubyeye.xmemcached MemcachedClient MemcachedClientBuilder XMemcachedClient CASOperation XMemcachedClientBuilder GetsResponse)
 		   (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator PHPMemcacheSessionLocator)
 		   (net.rubyeye.xmemcached.utils AddrUtil)
+           (java.io ByteArrayInputStream ByteArrayOutputStream)
+           (java.util.zip DeflaterOutputStream GZIPInputStream GZIPOutputStream InflaterInputStream)
            (net.rubyeye.xmemcached.transcoders CachedData Transcoder SerializingTranscoder)
 		   (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
 		   (java.net InetSocketAddress))
   (:refer-clojure :exclude [get set replace])
   (:require [clojure.data.json :as json]
+            [taoensso.nippy.compression :as compression]
             [taoensso.nippy :as nippy])
   (:use
    [clojure.walk :only [walk]]))
@@ -57,6 +60,7 @@
    :tag MemcachedClient}
   (deref (or *memcached-client* @global-memcached-client (throw no-client-error))))
 
+(defonce ^{:private true} compress-threshold* (atom (* 16 1024)))
 (defn memcached
   "Create a memcached client with zero or more options(any order):
     :protocol  Protocol to talk with memcached,a keyword in :text,:binary or :kestrel,default is text.
@@ -68,18 +72,23 @@
     :session-locator memcached connection locator,default is created by :hash algorithm value.
     :heartbeat  Whether to do heartbeating when connections are idle,default is true.
     :timeout  Operation timeout in milliseconds,default is five seconds.
+    :compress-threshold Value compression threhold in bytes, default is 16K.
     :name  A name to define a memcached client instance"
   [servers & opts]
   (delay
-   (let [{:keys [name protocol hash pool timeout transcoder reconnect sanitize-keys heartbeat merge-factor merge-buffer session-locator]
+   (let [{:keys [name protocol hash pool timeout transcoder reconnect
+                 sanitize-keys heartbeat merge-factor merge-buffer
+                 session-locator  compress-threshold]
           :or {pool 1
                merge-factor 50
                merge-buffer true
                timeout 5000
+               compress-threshold  (* 16 1024) ;;default is 16K
                transcoder (SerializingTranscoder.)
                reconnect true
                sanitize-keys false
                heartbeat true}} (apply hash-map (unquote-options opts))]
+     (reset! compress-threshold* compress-threshold)
      (let [builder (doto (XMemcachedClientBuilder.  (AddrUtil/getAddresses servers))
                      (.setName name)
                      (.setTranscoder transcoder)
@@ -211,18 +220,69 @@
   `(= byte-array-class
       (class ~x)))
 
+(defonce ^:private compress-transcoder (SerializingTranscoder.))
+
+(defprotocol Compressor
+  (compress ^bytes [this bs] "Compress byte array.")
+  (decompress ^bytes [this bs] "Decompress byte array.")
+  (flag [this] "The flag to be stored in memcached."))
+
+(deftype GZipCompressor []
+  Compressor
+  (compress [_ v]
+    (let [^ByteArrayOutputStream bos (ByteArrayOutputStream.)]
+      (with-open [^ByteArrayOutputStream bos bos
+                  gz (GZIPOutputStream. bos)]
+        (.write gz ^bytes v))
+      (.toByteArray bos)))
+  (decompress [_ v]
+    (let [^bytes buf (byte-array (* 32 1024))
+          ^ByteArrayOutputStream bos (ByteArrayOutputStream.)]
+      (with-open [^ByteArrayOutputStream bos bos
+                  ^ByteArrayInputStream bis (ByteArrayInputStream. ^bytes v)
+                  ^GZIPInputStream gz (GZIPInputStream. bis)]
+        (loop []
+          (let [r (.read gz buf)]
+            (when (> r 0)
+              (.write bos buf 0 r)
+              (recur)))))
+      (.toByteArray bos)))
+  (flag [_] 90))
+
+(defonce ^:dynamic default-compressor (GZipCompressor.))
+
+(defn- wrap-compress [f]
+  (fn [this obj]
+    (let [^CachedData d (f this obj)
+          ^bytes data (.getData d)]
+      (if (> (alength data) @compress-threshold*)
+        (CachedData. (flag default-compressor) (compress default-compressor data) (* 1024 1024) -1)
+        d))))
+
+(defn- wrap-decompress [f]
+  (fn [this ^CachedData d]
+    (when (= (flag default-compressor) (.getFlag d))
+      (.setData d (decompress default-compressor (.getData d))))
+    (f this d)))
+
 (def nippy-transcoder (reify Transcoder
                         (encode [this obj]
-                          (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
-                                (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
-                                :else
-                                (CachedData. 1 (nippy/freeze obj) (* 1024 1024) -1)))
+                          ((wrap-compress
+                            (fn [this obj]
+                              (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
+                                    (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
+                                    :else
+                                    (CachedData. 1 (nippy/freeze obj)  (* 1024 1024) -1))))
+                           this obj))
                         (decode [this ^CachedData data]
-                          (let [ ^bytes bs (.getData data)]
-                            (case (.getFlag data)
-                              0 (String. ^bytes bs "utf-8")
-                              1 (nippy/thaw bs)
-                              2 bs)))
+                          ((wrap-decompress
+                            (fn [this ^CachedData data]
+                              (let [ ^bytes bs (.getData data)]
+                                (case (.getFlag data)
+                                  0 (String. ^bytes bs "utf-8")
+                                  1 (nippy/thaw bs)
+                                  2 bs))))
+                           this data))
                         (setPrimitiveAsString [this b])
                         (setPackZeros [this b])
                         (setCompressionThreshold [this b])
@@ -232,15 +292,21 @@
 
 (def clj-json-transcoder (reify Transcoder
                            (encode [this obj]
-                             (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
-                                   (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
-                                   :else
-                                   (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") (* 1024 1024) -1)))
+                             ((wrap-compress
+                               (fn [this obj]
+                                 (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
+                                       (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
+                                       :else
+                                       (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") (* 1024 1024) -1))))
+                              this obj))
                            (decode [this ^CachedData data]
-                             (case (.getFlag data)
-                               0 (String. ^bytes (.getData data) "utf-8")
-                               1 (json/read-str (String. ^bytes (.getData data) "utf-8") :key-fn keyword)
-                               2 (.getData data)))
+                             ((wrap-decompress
+                               (fn [this ^CachedData data]
+                                 (case (.getFlag data)
+                                   0 (String. ^bytes (.getData data) "utf-8")
+                                   1 (json/read-str (String. ^bytes (.getData data) "utf-8") :key-fn keyword)
+                                   2 (.getData data))))
+                              this data))
                            (setPrimitiveAsString [this b])
                            (setPackZeros [this b])
                            (setCompressionThreshold [this b])

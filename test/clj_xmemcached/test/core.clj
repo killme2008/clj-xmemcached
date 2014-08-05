@@ -87,8 +87,8 @@
         (is (delete "a"))
         (is (nil? (get "a")))
         (finally
-         (flush-all)
-         (shutdown))))))
+          (flush-all)
+          (shutdown))))))
 
 (deftest test-set-client!
   (let [cli (memcached test-servers)]
@@ -236,3 +236,19 @@
         (finally
           (flush-all)
           (shutdown))))))
+
+(deftest test-compressor
+  (let [x (clojure.string/join (repeatedly (* 32 1024) #(rand-int 10)))]
+    (is (= (* 32 1024) (count x)))
+    (let [compressed (compress default-compressor (.getBytes x))]
+      (is (not= (* 32 1024) (count compressed)))
+      (is (not= x (String. compressed)))
+      (is (= x (String. (decompress default-compressor compressed)))))
+    (let [cli (memcached test-servers)]
+      (with-client cli
+        (try
+          (is (set "x" x))
+          (is (= x (get "x")))
+          (finally
+            (flush-all)
+            (shutdown)))))))
