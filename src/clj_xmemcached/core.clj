@@ -250,13 +250,14 @@
   (flag [_] 90))
 
 (defonce ^:dynamic default-compressor (GZipCompressor.))
+(defonce ^:private max-size (* 1024 1024))
 
 (defn- wrap-compress [f]
   (fn [this obj]
     (let [^CachedData d (f this obj)
           ^bytes data (.getData d)]
       (if (> (alength data) @compress-threshold*)
-        (CachedData. (flag default-compressor) (compress default-compressor data) (* 1024 1024) -1)
+        (CachedData. (flag default-compressor) (compress default-compressor data) max-size -1)
         d))))
 
 (defn- wrap-decompress [f]
@@ -269,10 +270,10 @@
                         (encode [this obj]
                           ((wrap-compress
                             (fn [this obj]
-                              (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
-                                    (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
+                              (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") max-size -1)
+                                    (bytes? obj) (CachedData. 2 (bytes obj) max-size -1)
                                     :else
-                                    (CachedData. 1 (nippy/freeze obj)  (* 1024 1024) -1))))
+                                    (CachedData. 1 (nippy/freeze obj)  max-size -1))))
                            this obj))
                         (decode [this ^CachedData data]
                           ((wrap-decompress
@@ -294,10 +295,10 @@
                            (encode [this obj]
                              ((wrap-compress
                                (fn [this obj]
-                                 (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") (* 1024 1024) -1)
-                                       (bytes? obj) (CachedData. 2 (bytes obj) (* 1024 1024) -1)
+                                 (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") max-size -1)
+                                       (bytes? obj) (CachedData. 2 (bytes obj) max-size -1)
                                        :else
-                                       (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") (* 1024 1024) -1))))
+                                       (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") max-size -1))))
                               this obj))
                            (decode [this ^CachedData data]
                              ((wrap-decompress
