@@ -224,8 +224,7 @@
 
 (defprotocol Compressor
   (compress ^bytes [this bs] "Compress byte array.")
-  (decompress ^bytes [this bs] "Decompress byte array.")
-  (flag [this] "The flag to be stored in memcached."))
+  (decompress ^bytes [this bs] "Decompress byte array."))
 
 (deftype GZipCompressor []
   Compressor
@@ -246,74 +245,70 @@
             (when (> r 0)
               (.write bos buf 0 r)
               (recur)))))
-      (.toByteArray bos)))
-  (flag [_] 90))
+      (.toByteArray bos))))
 
 (defonce ^:dynamic default-compressor (GZipCompressor.))
 (defonce ^:private max-size (* 1024 1024))
 
-(defn- wrap-compress [f]
-  (fn [this obj]
-    (let [^CachedData d (f this obj)
-          ^bytes data (.getData d)]
-      (if (> (alength data) @compress-threshold*)
-        (CachedData. (flag default-compressor) (compress default-compressor data) max-size -1)
-        d))))
+(defn- ^CachedData do-compress [^CachedData d]
+  (let [^bytes data (.getData d)]
+    (if (> (alength data) @compress-threshold*)
+      (CachedData. (bit-or 4 (.getFlag d)) (compress default-compressor data) max-size -1)
+      d)))
 
-(defn- wrap-decompress [f]
-  (fn [this ^CachedData d]
-    (when (= (flag default-compressor) (.getFlag d))
-      (.setData d (decompress default-compressor (.getData d))))
-    (f this d)))
+(defn- ^CachedData do-decompress [^CachedData d]
+  (when (pos? (bit-and (.getFlag d) 4))
+    (.setData d (decompress default-compressor (.getData d)))
+    (.setFlag (bit-and (.getFlag d) (bit-not 4)) d))
+  d)
 
-(def nippy-transcoder (reify Transcoder
-                        (encode [this obj]
-                          ((wrap-compress
-                            (fn [this obj]
-                              (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") max-size -1)
-                                    (bytes? obj) (CachedData. 2 (bytes obj) max-size -1)
-                                    :else
-                                    (CachedData. 1 (nippy/freeze obj)  max-size -1))))
-                           this obj))
-                        (decode [this ^CachedData data]
-                          ((wrap-decompress
-                            (fn [this ^CachedData data]
-                              (let [ ^bytes bs (.getData data)]
-                                (case (.getFlag data)
-                                  0 (String. ^bytes bs "utf-8")
-                                  1 (nippy/thaw bs)
-                                  2 bs))))
-                           this data))
-                        (setPrimitiveAsString [this b])
-                        (setPackZeros [this b])
-                        (setCompressionThreshold [this b])
-                        (isPrimitiveAsString [this] false)
-                        (isPackZeros [this] false)
-                        (setCompressionMode [this m])))
+(defprotocol MemcachedTranscoder
+  (mashall ^CachedData [this obj] "Encode object into a byte array")
+  (unmashall [this bs] "Decode a byte array to a object."))
 
-(def clj-json-transcoder (reify Transcoder
-                           (encode [this obj]
-                             ((wrap-compress
-                               (fn [this obj]
-                                 (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") max-size -1)
-                                       (bytes? obj) (CachedData. 2 (bytes obj) max-size -1)
-                                       :else
-                                       (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") max-size -1))))
-                              this obj))
-                           (decode [this ^CachedData data]
-                             ((wrap-decompress
-                               (fn [this ^CachedData data]
-                                 (case (.getFlag data)
-                                   0 (String. ^bytes (.getData data) "utf-8")
-                                   1 (json/read-str (String. ^bytes (.getData data) "utf-8") :key-fn keyword)
-                                   2 (.getData data))))
-                              this data))
-                           (setPrimitiveAsString [this b])
-                           (setPackZeros [this b])
-                           (setCompressionThreshold [this b])
-                           (isPrimitiveAsString [this] false)
-                           (isPackZeros [this] false)
-                           (setCompressionMode [this m])))
+(defmacro def-transcoder [name & body]
+  (let [type-name (symbol (.replaceAll ^String (str name) "-" "_"))]
+    `(do
+       (deftype ~type-name  []
+         MemcachedTranscoder
+         ~@body)
+       (let [t# (new ~type-name)]
+         (def ~name (reify Transcoder
+                      (encode [this# obj#]
+                        (do-compress (mashall t# obj#)))
+                      (decode [this# data#]
+                        (unmashall t# (do-decompress data#)))
+                      (setPrimitiveAsString [this# b#])
+                      (setPackZeros [this# b#])
+                      (setCompressionThreshold [this# b#])
+                      (isPrimitiveAsString [this#] false)
+                      (isPackZeros [this#] false)
+                      (setCompressionMode [this# m#])))))))
+
+(def-transcoder nippy-transcoder
+  (mashall [this obj]
+           (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") max-size -1)
+                 (bytes? obj) (CachedData. 2 (bytes obj) max-size -1)
+                 :else
+                 (CachedData. 1 (nippy/freeze obj)  max-size -1)))
+  (unmashall [this data]
+             (let [ ^bytes bs (.getData ^CachedData data)]
+               (case (.getFlag ^CachedData data)
+                 0 (String. ^bytes bs "utf-8")
+                 1 (nippy/thaw bs)
+                 2 bs))))
+
+(def-transcoder clj-json-transcoder
+  (mashall [this obj]
+           (cond (string? obj) (CachedData. 0 (.getBytes ^String obj "utf-8") max-size -1)
+                 (bytes? obj) (CachedData. 2 (bytes obj) max-size -1)
+                 :else
+                 (CachedData. 1 (.getBytes ^String (json/write-str obj) "utf-8") max-size -1)))
+  (unmashall [this data]
+             (case (.getFlag ^CachedData data)
+               0 (String. ^bytes (.getData ^CachedData data) "utf-8")
+               1 (json/read-str (String. ^bytes (.getData ^CachedData data) "utf-8") :key-fn keyword)
+               2 (.getData ^CachedData data))))
 
 (defmacro try-lock
   "Lightweight distribution lock.
