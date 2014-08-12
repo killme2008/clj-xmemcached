@@ -260,7 +260,7 @@
   (when (pos? (bit-and (.getFlag d) 4))
     (.setCapacity d max-size)
     (.setData d (decompress default-compressor (.getData d)))
-    (.setFlag (bit-and (.getFlag d) (bit-not 4)) d))
+    (.setFlag d (bit-and (.getFlag d) (bit-not 4))))
   d)
 
 (defprotocol MemcachedTranscoder
