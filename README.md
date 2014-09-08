@@ -70,7 +70,7 @@ If you have only one client in your application, you can set the global client b
 ```clj
 	(xm/set-client! client)
 ```
-Then all the following requests will use the global client by default,except you bind another client using `with-cliet` macro.
+Then all the following requests will use the global client by default,except you bind another client using `with-client` macro.
 
 ### Get items
 ```clj
