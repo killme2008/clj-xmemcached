@@ -237,14 +237,18 @@
   (decompress [_ v]
     (let [^bytes buf (byte-array (* 32 1024))
           ^ByteArrayOutputStream bos (ByteArrayOutputStream.)]
-      (with-open [^ByteArrayOutputStream bos bos
-                  ^ByteArrayInputStream bis (ByteArrayInputStream. ^bytes v)
-                  ^GZIPInputStream gz (GZIPInputStream. bis)]
-        (loop []
-          (let [r (.read gz buf)]
-            (when (> r 0)
-              (.write bos buf 0 r)
-              (recur)))))
+      (try
+        (with-open [^ByteArrayOutputStream bos bos
+                    ^ByteArrayInputStream bis (ByteArrayInputStream. ^bytes v)
+                    ^GZIPInputStream gz (GZIPInputStream. bis)]
+          (loop []
+            (let [r (.read gz buf)]
+              (when (> r 0)
+                (.write bos buf 0 r)
+                (recur)))))
+        (catch Throwable t
+          (println (String. ^bytes v))
+          (throw t)))
       (.toByteArray bos))))
 
 (defonce ^:dynamic default-compressor (GZipCompressor.))
