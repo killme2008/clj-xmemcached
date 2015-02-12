@@ -235,20 +235,16 @@
         (.write gz ^bytes v))
       (.toByteArray bos)))
   (decompress [_ v]
-    (let [^bytes buf (byte-array (* 32 1024))
+    (let [^bytes buf (byte-array (* 16 1024))
           ^ByteArrayOutputStream bos (ByteArrayOutputStream.)]
-      (try
-        (with-open [^ByteArrayOutputStream bos bos
-                    ^ByteArrayInputStream bis (ByteArrayInputStream. ^bytes v)
-                    ^GZIPInputStream gz (GZIPInputStream. bis)]
-          (loop []
-            (let [r (.read gz buf)]
-              (when (> r 0)
-                (.write bos buf 0 r)
-                (recur)))))
-        (catch Throwable t
-          (println (String. ^bytes v))
-          (throw t)))
+      (with-open [^ByteArrayOutputStream bos bos
+                  ^ByteArrayInputStream bis (ByteArrayInputStream. ^bytes v)
+                  ^GZIPInputStream gz (GZIPInputStream. bis)]
+        (loop []
+          (let [r (.read gz buf)]
+            (when (> r 0)
+              (.write bos buf 0 r)
+              (recur)))))
       (.toByteArray bos))))
 
 (defonce ^:dynamic default-compressor (GZipCompressor.))
@@ -261,11 +257,13 @@
       d)))
 
 (defn- ^CachedData do-decompress [^CachedData d]
-  (when (pos? (bit-and (.getFlag d) 4))
-    (.setCapacity d max-size)
-    (.setData d (decompress default-compressor (.getData d)))
-    (.setFlag d (bit-and (.getFlag d) (bit-not 4))))
-  d)
+  (if (pos? (bit-and (.getFlag d) 4))
+    (CachedData.
+     (bit-and (.getFlag d) (bit-not 4))
+     (decompress default-compressor (.getData d))
+     max-size
+     -1)
+    d))
 
 (defprotocol MemcachedTranscoder
   (mashall ^CachedData [this obj] "Encode object into a byte array")
