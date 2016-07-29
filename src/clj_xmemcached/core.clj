@@ -1,15 +1,15 @@
 (ns
-	^{:doc "The clj-xmemcached core"
-	  :author "Dennis zhuang<killme2008@gmail.com>"}
-  clj-xmemcached.core
+    ^{:doc "The clj-xmemcached core"
+      :author "Dennis zhuang<killme2008@gmail.com>"}
+    clj-xmemcached.core
   (:import (net.rubyeye.xmemcached MemcachedClient MemcachedClientBuilder XMemcachedClient CASOperation XMemcachedClientBuilder GetsResponse)
-		   (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator PHPMemcacheSessionLocator)
-		   (net.rubyeye.xmemcached.utils AddrUtil)
+           (net.rubyeye.xmemcached.impl KetamaMemcachedSessionLocator ArrayMemcachedSessionLocator PHPMemcacheSessionLocator)
+           (net.rubyeye.xmemcached.utils AddrUtil)
            (java.io ByteArrayInputStream ByteArrayOutputStream)
            (java.util.zip DeflaterOutputStream GZIPInputStream GZIPOutputStream InflaterInputStream)
            (net.rubyeye.xmemcached.transcoders CachedData Transcoder SerializingTranscoder)
-		   (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
-		   (java.net InetSocketAddress))
+           (net.rubyeye.xmemcached.command BinaryCommandFactory KestrelCommandFactory TextCommandFactory)
+           (java.net InetSocketAddress))
   (:refer-clojure :exclude [get set replace])
   (:require [clojure.data.json :as json]
             [taoensso.nippy.compression :as compression]
@@ -19,11 +19,11 @@
 
 (defn- unquote-options [args]
   (walk (fn [item]
-		  (cond (and (seq? item) (= `unquote (first item))) (second item)
-				(or (seq? item) (symbol? item)) (list 'quote item)
-				:else (unquote-options item)))
-		identity
-		args))
+          (cond (and (seq? item) (= `unquote (first item))) (second item)
+                (or (seq? item) (symbol? item)) (list 'quote item)
+                :else (unquote-options item)))
+        identity
+        args))
 
 (defn- make-command-factory [protocol]
   (case protocol
@@ -61,6 +61,11 @@
   (deref (or *memcached-client* @global-memcached-client (throw no-client-error))))
 
 (defonce ^{:private true} compress-threshold* (atom (* 16 1024)))
+
+(defn- get-default-select-pool-size []
+  (-> (XMemcachedClientBuilder/getDefaultConfiguration)
+      (.getSelectorPoolSize)))
+
 (defn memcached
   "Create a memcached client with zero or more options(any order):
     :protocol  Protocol to talk with memcached,a keyword in :text,:binary or :kestrel,default is text.
@@ -73,12 +78,13 @@
     :heartbeat  Whether to do heartbeating when connections are idle,default is true.
     :timeout  Operation timeout in milliseconds,default is five seconds.
     :compress-threshold Value compression threhold in bytes, default is 16K.
-    :name  A name to define a memcached client instance"
+    :name  A name to define a memcached client instance
+    :selector-pool-size  Reactor pool size for every client instance, it's computed based on CPUs number by default."
   [servers & opts]
   (delay
    (let [{:keys [name protocol hash pool timeout transcoder reconnect
                  sanitize-keys heartbeat merge-factor merge-buffer
-                 session-locator  compress-threshold]
+                 selector-pool-size session-locator  compress-threshold]
           :or {pool 1
                merge-factor 50
                merge-buffer true
@@ -94,6 +100,8 @@
                      (.setTranscoder transcoder)
                      (.setSessionLocator (or session-locator (make-session-locator hash)))
                      (.setConnectionPoolSize pool)
+                     (.setSelectorPoolSize (or selector-pool-size
+                                               (get-default-select-pool-size)))
                      (.setCommandFactory  (make-command-factory protocol)))
            rt (.build builder)]
        (doto rt
@@ -145,11 +153,11 @@
 
 (defn get "Get items by a key or many keys,when bulk get items,the result is java.util.HashMap"
   ([^String k]
-     (.get (get-memcached-client) k))
+   (.get (get-memcached-client) k))
   ([k1 k2 ]
-     (.get (get-memcached-client) ^java.util.Collection (list k1 k2)))
+   (.get (get-memcached-client) ^java.util.Collection (list k1 k2)))
   ([k1 k2 & ks]
-     (.get (get-memcached-client) ^java.util.Collection (list* k1 k2 ks))))
+   (.get (get-memcached-client) ^java.util.Collection (list* k1 k2 ks))))
 
 (defn gets
   "Gets an item's value by key,return value has a cas value"
@@ -168,8 +176,8 @@
 	 (cas key cas-fn max-times 0))
   ([^String key cas-fn ^Integer max-times ^Integer expire]
 	 (.cas (get-memcached-client) key expire (reify CASOperation
-                                               (getMaxTries [this] max-times)
-                                               (getNewValue [this _ value] (cas-fn  value))))))
+                                             (getMaxTries [this] max-times)
+                                             (getNewValue [this _ value] (cas-fn  value))))))
 
 ;;define incr/decr functions
 (defmacro define-incr-decr-fn
@@ -191,10 +199,10 @@
 (defn delete
   "Delete an item by key [with CAS values that was get in binary protocol]."
   ([key]
-     (delete key 0))
+   (delete key 0))
   ([key cas]
-     (let [^MemcachedClient xmc (get-memcached-client)]
-       (.delete xmc ^String key ^long cas ^long (.getOpTimeout xmc)))))
+   (let [^MemcachedClient xmc (get-memcached-client)]
+     (.delete xmc ^String key ^long cas ^long (.getOpTimeout xmc)))))
 
 (defn flush-all
   "Flush all values in memcached.WARNNING:this method will remove all items in memcached."
@@ -204,16 +212,16 @@
 (defn stats
   "Get statistics info from all memcached servers"
   ([]
-     (stats (get-memcached-client)))
+   (stats (get-memcached-client)))
   ([^MemcachedClient cli]
-     (.getStats cli)))
+   (.getStats cli)))
 
 (defn shutdown
   "Shutdown the memcached client"
   ([]
-     (shutdown (get-memcached-client)))
+   (shutdown (get-memcached-client)))
   ([^MemcachedClient cli]
-     (.shutdown cli)))
+   (.shutdown cli)))
 
 (defonce byte-array-class (Class/forName "[B"))
 (definline bytes? [x]
@@ -324,14 +332,14 @@
         (start-service))"
 
   ([key expire then]
-     `(try-lock ~key ~expire ~then nil))
+   `(try-lock ~key ~expire ~then nil))
   ([key expire then else]
-     `(if (add ~key true ~expire)
-        (try
-          ~then
-          (finally
-            (delete ~key)))
-        ~else)))
+   `(if (add ~key true ~expire)
+      (try
+        ~then
+        (finally
+          (delete ~key)))
+      ~else)))
 
 (defmacro through
   "A macro to get item from cache or cache the value evaluated by load cause.
@@ -342,11 +350,11 @@
         (load-user-from-db uid)) "
 
   ([key load]
-     `(through ~key 0 ~load))
+   `(through ~key 0 ~load))
   ([key expire load]
-     `(if-let [rt# (get ~key)]
-        rt#
-        (let [v# ~load]
-          (when v#
-            (add ~key v# ~expire))
-          v#))))
+   `(if-let [rt# (get ~key)]
+      rt#
+      (let [v# ~load]
+        (when v#
+          (add ~key v# ~expire))
+        v#))))

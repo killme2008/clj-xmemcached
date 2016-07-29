@@ -6,19 +6,14 @@ An opensource memcached client for clojure wraps [xmemcached](http://code.google
 
 To use clj-xmemcached,add:
 
-```
-	[clj-xmemcached "0.2.6-RC1"]
+```clojure
+	[clj-xmemcached "0.3.0"]
 ```
 to your project.clj.
 
 ##API docs
 
 [clj-xmemcached APIs](http://fnil.net/docs/clj-xmemcached/)
-
-## News
-
-* `0.2.6-RC1` released. Fixed GZIP exception when decompressing.
-* `0.2.5-RC3` released, supports data compression.
 
 ## Usage
 
