@@ -211,6 +211,6 @@ That it is:
 
 ## License
 
-Copyright (C) 2011-2014 dennis zhuang[killme2008@gmail.com]
+Copyright (C) 2011-2020 dennis zhuang[killme2008@gmail.com]
 
 Distributed under the Eclipse Public License, the same as Clojure.
