@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Clj-xmemcached by killme2008</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Clj-xmemcached</h1>
+      <h2 class="project-tagline">Memcached client for clojure.</h2>
+      <a href="https://github.com/killme2008/clj-xmemcached" class="btn">View on GitHub</a>
+      <a href="https://github.com/killme2008/clj-xmemcached/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/killme2008/clj-xmemcached/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="clj-xmemcached" class="anchor" href="#clj-xmemcached" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>clj-xmemcached</h1>
+
+<p>An opensource memcached client for clojure wraps <a href="http://code.google.com/p/xmemcached/">xmemcached</a>. <a href="http://code.google.com/p/xmemcached/">Xmemcached</a> is an opensource high performance memcached client for java.</p>
+
+<h2>
+<a id="leiningen-usage" class="anchor" href="#leiningen-usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Leiningen Usage</h2>
+
+<p>To use clj-xmemcached,add:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    [clj-xmemcached <span class="pl-s"><span class="pl-pds">"</span>0.3.0<span class="pl-pds">"</span></span>]</pre></div>
+
+<p>to your project.clj.</p>
+
+<h2>
+<a id="api-docs" class="anchor" href="#api-docs" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>API docs</h2>
+
+<p><a href="http://fnil.net/docs/clj-xmemcached/">clj-xmemcached APIs</a></p>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h2>
+
+<h3>
+<a id="client" class="anchor" href="#client" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Client</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-k">require</span> '[clj-xmemcached.core <span class="pl-c1">:as</span> xm])
+    (<span class="pl-k">def</span> <span class="pl-e">client</span> (<span class="pl-en">xm/memcached</span> <span class="pl-s"><span class="pl-pds">"</span>host:port<span class="pl-pds">"</span></span>))
+    (<span class="pl-k">def</span> <span class="pl-e">client</span> (<span class="pl-en">xm/memcached</span> <span class="pl-s"><span class="pl-pds">"</span>host1:port1 host2:port2<span class="pl-pds">"</span></span> <span class="pl-c1">:protocol</span> <span class="pl-c1">:binary</span>))</pre></div>
+
+<p>We create a memcached client using text protocol by default,but we can create a client using binary protocol.</p>
+
+<p>Also,we can create a client using consistent hash and binary protocol:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-k">def</span> <span class="pl-e">client</span> (<span class="pl-en">xm/memcached</span> <span class="pl-s"><span class="pl-pds">"</span>host1:port1 host2:port2<span class="pl-pds">"</span></span> <span class="pl-c1">:protocol</span> <span class="pl-c1">:binary</span> <span class="pl-c1">:hash</span> <span class="pl-c1">:consistent</span>))</pre></div>
+
+<p>All valid options:</p>
+
+<pre><code> :protocol  Protocol to talk with memcached,a keyword in :text,:binary or :kestrel,default is text.
+ :hash  Hash algorithm,a keyword in  :consistent, :standard or :php, default is standard hash.
+ :pool  Connection pool size,default is 1,it's a recommended value.
+ session-locator memcached connection locator,default is created based on :hash algorithm value.
+ :sanitize-keys  Whether to sanitize keys before operation,default is false.
+ :reconnect  Whether to reconnect when connections are disconnected,default is true.
+ :heartbeat  Whether to do heartbeating when connections are idle,default is true.
+ :timeout  Operation timeout in milliseconds,default is five seconds.
+ :transcoder Transcoder to encode/decode data. For example, clj-json-transcoder.
+ :name  A name to define a memcached client instance"
+</code></pre>
+
+<h3>
+<a id="store-items" class="anchor" href="#store-items" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Store items</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">xm/with-client</span> client
+        (<span class="pl-en">xm/set</span> <span class="pl-s"><span class="pl-pds">"</span>key1<span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">"</span>dennis<span class="pl-pds">"</span></span>)
+        (<span class="pl-en">xm/set</span> <span class="pl-s"><span class="pl-pds">"</span>key2<span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">"</span>dennis<span class="pl-pds">"</span></span> <span class="pl-c1">1</span>)
+        (<span class="pl-en">xm/add</span> <span class="pl-s"><span class="pl-pds">"</span>key3<span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">"</span>dennis<span class="pl-pds">"</span></span>)
+        <span class="pl-c">;;touch the key3 expire timeout to 3 seconds.</span>
+        (<span class="pl-en">xm/touch</span> <span class="pl-s"><span class="pl-pds">"</span>key3<span class="pl-pds">"</span></span> <span class="pl-c1">2</span>))</pre></div>
+
+<p>Use <code>with-client</code> macro to bind the client for following operations.
+The value <code>100</code> in <code>set</code> is the expire timeout for the item in seconds.Storing item functions include <code>set</code>,<code>add</code>,<code>replace</code>,<code>touch</code>,<code>append</code> and <code>prepend</code>.</p>
+
+<p>Unless you need the added flexibility of specifying the client for each request,you can save some typing with a little macro:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-k">defmacro</span> <span class="pl-e">wxm</span>
+        [&amp; body]
+        `(xm/with-client client ~@body))</pre></div>
+
+<p>If you have only one client in your application, you can set the global client by:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">xm/set-client!</span> client)</pre></div>
+
+<p>Then all the following requests will use the global client by default,except you bind another client using <code>with-client</code> macro.</p>
+
+<h3>
+<a id="get-items" class="anchor" href="#get-items" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Get items</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    <span class="pl-c">;;get k1 k2 k3...</span>
+    (<span class="pl-en">wxm</span>
+        (<span class="pl-en">xm/get</span> <span class="pl-s"><span class="pl-pds">"</span>key1<span class="pl-pds">"</span></span>)
+        (<span class="pl-en">xm/get</span> <span class="pl-s"><span class="pl-pds">"</span>key1<span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">"</span>key2<span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">"</span>key3<span class="pl-pds">"</span></span>)
+        (<span class="pl-en">xm/gets</span> <span class="pl-s"><span class="pl-pds">"</span>key1<span class="pl-pds">"</span></span>))</pre></div>
+
+<p>Using <code>get</code> to retrieve items from memcached.You can retrieve many items at one time by bulk getting,but it's result is a <code>java.util.HashMap</code>.
+<code>gets</code> returns a clojure map contains cas and value,for example:</p>
+
+<div class="highlight highlight-source-clojure"><pre>      {<span class="pl-c1">:value</span> <span class="pl-s"><span class="pl-pds">"</span>hello,dennis zhuang<span class="pl-pds">"</span></span>, <span class="pl-c1">:cas</span> <span class="pl-c1">396</span>}</pre></div>
+
+<h3>
+<a id="increasedecrease-numbers" class="anchor" href="#increasedecrease-numbers" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Increase/Decrease numbers</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    <span class="pl-c">;;incr/decr key delta init-value</span>
+    (<span class="pl-en">wxm</span>
+        (<span class="pl-en">xm/incr</span> <span class="pl-s"><span class="pl-pds">"</span>num<span class="pl-pds">"</span></span> <span class="pl-c1">1</span>)
+        (<span class="pl-en">xm/decr</span> <span class="pl-s"><span class="pl-pds">"</span>num<span class="pl-pds">"</span></span> <span class="pl-c1">1</span>)
+        (<span class="pl-en">xm/incr</span> <span class="pl-s"><span class="pl-pds">"</span>num<span class="pl-pds">"</span></span> <span class="pl-c1">1</span> <span class="pl-c1">0</span>)</pre></div>
+
+<p>Above codes try to increase/decrease a number in memcached with key "num",and if the item is not exists,then set it to zero.</p>
+
+<h3>
+<a id="delete-items" class="anchor" href="#delete-items" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Delete items</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">xm/delete</span> <span class="pl-s"><span class="pl-pds">"</span>num<span class="pl-pds">"</span></span>)
+    <span class="pl-c">;;delete with CAS in binary protocol.</span>
+    (<span class="pl-en">xm/delete</span> <span class="pl-s"><span class="pl-pds">"</span>num<span class="pl-pds">"</span></span> (<span class="pl-c1">:cas</span> (<span class="pl-en">gets</span> <span class="pl-s"><span class="pl-pds">"</span>num<span class="pl-pds">"</span></span>)))</pre></div>
+
+<h3>
+<a id="compare-and-set" class="anchor" href="#compare-and-set" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Compare and set</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">xm/cas</span> <span class="pl-s"><span class="pl-pds">"</span>key<span class="pl-pds">"</span></span> inc)</pre></div>
+
+<p>We use <code>inc</code> function to increase the current value in memcached and try to compare and set it at most Integer.MAX_VALUE times.
+<code>cas</code> can be called in:</p>
+
+<div class="highlight highlight-source-clojure"><pre>     (<span class="pl-en">xm/cas</span> key cas-fn max-times)</pre></div>
+
+<p>The cas-fn is a function to return a new value,set item's new value to:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">cas-fn</span> current-value)</pre></div>
+
+<h3>
+<a id="distribution-lock" class="anchor" href="#distribution-lock" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Distribution Lock</h3>
+
+<p>Use memcached as a lightweight distribution lock:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-k">def</span> <span class="pl-e">counter</span> (<span class="pl-en">atom</span> <span class="pl-c1">0</span>))
+    (<span class="pl-en">future</span> (<span class="pl-en">try-lock</span> <span class="pl-s"><span class="pl-pds">"</span>lock<span class="pl-pds">"</span></span> <span class="pl-c1">5</span> (<span class="pl-k">do</span> (<span class="pl-en">Thread/sleep</span> <span class="pl-c1">3000</span>)
+                                   (<span class="pl-en">swap!</span> counter inc))
+                                (<span class="pl-en">println</span> <span class="pl-s"><span class="pl-pds">"</span>else1<span class="pl-pds">"</span></span>)))
+    (<span class="pl-en">future</span> (<span class="pl-en">try-lock</span> <span class="pl-s"><span class="pl-pds">"</span>lock<span class="pl-pds">"</span></span> <span class="pl-c1">5</span> (<span class="pl-k">do</span> (<span class="pl-en">Thread/sleep</span> <span class="pl-c1">3000</span>)
+                                   (<span class="pl-en">swap!</span> counter inc))
+                                (<span class="pl-en">println</span> <span class="pl-s"><span class="pl-pds">"</span>else2<span class="pl-pds">"</span></span>)))
+    (<span class="pl-en">future</span> (<span class="pl-en">try-lock</span> <span class="pl-s"><span class="pl-pds">"</span>lock<span class="pl-pds">"</span></span> <span class="pl-c1">5</span> (<span class="pl-k">do</span> (<span class="pl-en">Thread/sleep</span> <span class="pl-c1">3000</span>)
+                                   (<span class="pl-en">swap!</span> counter inc))
+                                (<span class="pl-en">println</span> <span class="pl-s"><span class="pl-pds">"</span>else3<span class="pl-pds">"</span></span>)))
+
+    (<span class="pl-en">Thread/sleep</span> <span class="pl-c1">4000</span>)
+    (<span class="pl-en">is</span> (<span class="pl-en">nil?</span> (<span class="pl-en">get</span> <span class="pl-s"><span class="pl-pds">"</span>lock<span class="pl-pds">"</span></span>)))
+    (<span class="pl-en">is</span> (<span class="pl-en">=</span> <span class="pl-c1">1</span> @counter))</pre></div>
+
+<h3>
+<a id="through-macro" class="anchor" href="#through-macro" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>through macro</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">through</span> uid (<span class="pl-en">get-user-from-databse</span> uid))</pre></div>
+
+<p>Equals to:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-k">if-let</span> [rt (<span class="pl-en">get</span> uid)]
+        rt
+        (<span class="pl-k">let</span> [rt (<span class="pl-en">get-user-from-database</span> uid)]
+            (<span class="pl-k">when</span> rt
+                (<span class="pl-en">add</span> uid rt <span class="pl-c1">0</span>))
+            rt))</pre></div>
+
+<h3>
+<a id="shutdown" class="anchor" href="#shutdown" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Shutdown</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">xm/shutdown</span>)</pre></div>
+
+<h3>
+<a id="flush" class="anchor" href="#flush" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Flush</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">xm/flush-all</span>)</pre></div>
+
+<h3>
+<a id="statistics" class="anchor" href="#statistics" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Statistics</h3>
+
+<div class="highlight highlight-source-clojure"><pre>    (<span class="pl-en">xm/stats</span>)</pre></div>
+
+<h3>
+<a id="get-the-raw-xmemcachedclient-instance" class="anchor" href="#get-the-raw-xmemcachedclient-instance" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Get the raw XmemcachedClient instance</h3>
+
+<p>Because <code>memcached</code> function returns a delayed object,so if you want to get the raw <code>XmemcachedClient</code> instance,you have to deref it:</p>
+
+<div class="highlight highlight-source-clojure"><pre>    @client
+    (<span class="pl-en">xm/shutdown</span> @client)</pre></div>
+
+<h3>
+<a id="transcoders" class="anchor" href="#transcoders" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transcoders</h3>
+
+<p>We use <a href="http://xmemcached.googlecode.com/svn/trunk/apidocs/net/rubyeye/xmemcached/transcoders/SerializingTranscoder.html">SerializationTranscoder</a> by default,it will encode/decode values using java serialization.
+But since <code>0.2.2</code>, we provide a new transcoder <code>clj-json-transcoder</code> to encode/decode values using <a href="https://github.com/clojure/data.json">clojure.data.json</a>.It is suitable to integrate with other systems written in other languages.</p>
+
+<p>And we add <code>nippy-transcoder</code> in 0.2.3, it use <a href="https://github.com/ptaoussanis/nippy">nippy</a> for serialization.</p>
+
+<h3>
+<a id="example" class="anchor" href="#example" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Example</h3>
+
+<p>Please see the example code in <a href="https://github.com/killme2008/clj-xmemcached/blob/master/example/demo.clj">example/demo.clj</a></p>
+
+<h2>
+<a id="performance" class="anchor" href="#performance" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Performance:</h2>
+
+<p>Benchmark on my machine:</p>
+
+<pre><code>CPU 2.3 GHz Intel Core i5
+Memory 8G 1333 MHz DDR3
+JVM options: default
+</code></pre>
+
+<p>Start memcached by:</p>
+
+<pre><code>memcached -m 4096 -d
+</code></pre>
+
+<p>Benchmark result using text protocol and 1 NIO connection:</p>
+
+<pre><code>Benchmark set: threads=50,repeats=10000,total=500000
+Elapsed time: 10990.256 msecs
+Benchmark get: threads=50,repeats=10000,total=500000
+Elapsed time: 7768.998 msecs
+Benchmark set &amp; get: threads=50,repeats=10000,total=500000
+Elapsed time: 18445.409 msecs
+</code></pre>
+
+<p>That it is:</p>
+
+<pre><code>45495 sets/secs
+64350 gets/secs
+27114 tps (both set and get an item in one round)
+</code></pre>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
+
+<p>Copyright (C) 2011-2020 dennis zhuang[<a href="mailto:killme2008@gmail.com">killme2008@gmail.com</a>]</p>
+
+<p>Distributed under the Eclipse Public License, the same as Clojure.</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/killme2008/clj-xmemcached">Clj-xmemcached</a> is maintained by <a href="https://github.com/killme2008">killme2008</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
