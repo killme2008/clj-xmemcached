@@ -1,6 +1,6 @@
 # clj-xmemcached
 
-An opensource memcached client for clojure wraps [xmemcached](http://code.google.com/p/xmemcached/). [Xmemcached](http://code.google.com/p/xmemcached/) is an opensource high performance memcached client for java.
+An opensource memcached client for clojure wraps [xmemcached](http://fnil.net/xmemcached/). [Xmemcached](http://fnil.net/xmemcached/) is an opensource high performance memcached client for java maintained by me.
 
 ##Leiningen Usage
 
@@ -40,7 +40,8 @@ All valid options:
      :heartbeat  Whether to do heartbeating when connections are idle,default is true.
      :timeout  Operation timeout in milliseconds,default is five seconds.
      :transcoder Transcoder to encode/decode data. For example, clj-json-transcoder.
-     :name  A name to define a memcached client instance"
+     :name  A name to define a memcached client instance
+     :selector-pool-size  Reactor pool size for every client instance, it's computed based on CPUs number by default."
 
 ### Store items
 ```clj
