@@ -44,6 +44,7 @@
   (let [cli (deref (memcached test-servers
                               :protocol  :binary
                               :name "test"
+                              :selector-pool-size 2
                               :hash :standard
                               :timeout 1000
                               :pool 2))]
