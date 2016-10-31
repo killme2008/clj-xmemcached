@@ -7,7 +7,7 @@ An opensource memcached client for clojure wraps [xmemcached](http://fnil.net/xm
 To use clj-xmemcached,add:
 
 ```clojure
-	[clj-xmemcached "0.3.0"]
+	[clj-xmemcached "0.4.0"]
 ```
 to your project.clj.
 
